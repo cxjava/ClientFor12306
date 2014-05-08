@@ -9,52 +9,30 @@ import (
 	"net/http"
 	"net/http/httputil"
 
+	"github.com/lxn/walk"
+
 	_ "image/gif"
 	_ "image/jpeg"
 	_ "image/png"
 
-	"github.com/lxn/walk"
 	. "github.com/lxn/walk/declarative"
 )
 
 func main() {
 
-	req, err := http.NewRequest("GET", "https://kyfw.12306.cn/otn/passcodeNew/getPassCodeNew?module=login&rand=sjrand", nil)
-	if err != nil {
-		fmt.Println("doRequest http.NewRequest error:", err)
-		return
-	}
-	clientConn, err := newForwardClientConn("113.57.187.29", req.URL.Scheme)
-	if err != nil {
-		fmt.Println("doRequest newForwardClientConn error:", err)
-		return
-	}
-	defer clientConn.Close()
-	resp, err := clientConn.Do(req)
-
-	// resp, err := http.Get("http://kyfw.12306.cn/otn/passcodeNew/getPassCodeNew?module=login&rand=sjrand")
-	if err != nil {
-		fmt.Println("Client.Do:", err)
-		return
-	}
-	defer resp.Body.Close()
-	img1, s, err := image.Decode(resp.Body)
-	fmt.Println("Decode.Do:", s)
-	if err != nil {
-		fmt.Println("Decode.Do:", err)
-		return
-	}
+	img1 := updateImage()
 
 	var mw *walk.MainWindow
 	var acceptPB *walk.PushButton
+	var iv *walk.ImageView
 	bit, _ := walk.NewBitmapFromImage(img1)
+
 	// var imageView *walk.ImageView
 	// imageView.SetImage(bit)
-
 	if _, err := (MainWindow{
 		AssignTo: &mw,
 		Title:    "Animal Details",
-		MinSize:  Size{180, 220},
+		MinSize:  Size{180, 210},
 		Layout:   VBox{},
 		Children: []Widget{
 			Composite{
@@ -86,11 +64,17 @@ func main() {
 						Size:       8,
 					},
 					ImageView{
-						Image:   bit,
-						MinSize: Size{78, 26},
-						MaxSize: Size{78, 38},
-						// ColumnSpan: 2,
-						Name: "captcha1",
+						AssignTo:    &iv,
+						Image:       bit,
+						MinSize:     Size{78, 26},
+						MaxSize:     Size{78, 38},
+						Name:        "captcha1",
+						ToolTipText: "单击刷新验证码",
+						OnMouseUp: func(x, y int, button walk.MouseButton) {
+							img1 := updateImage()
+							bit, _ = walk.NewBitmapFromImage(img1)
+							iv.SetImage(bit)
+						},
 					},
 					VSpacer{
 						ColumnSpan: 1,
@@ -131,4 +115,34 @@ func newForwardClientConn(forwardAddress, scheme string) (*httputil.ClientConn, 
 		return nil, err
 	}
 	return httputil.NewClientConn(conn, nil), nil
+}
+
+func updateImage() image.Image {
+	req, err := http.NewRequest("GET", "https://kyfw.12306.cn/otn/passcodeNew/getPassCodeNew?module=login&rand=sjrand", nil)
+	if err != nil {
+		fmt.Println("doRequest http.NewRequest error:", err)
+		return nil
+	}
+	clientConn, err := newForwardClientConn("113.57.187.29", req.URL.Scheme)
+	if err != nil {
+		fmt.Println("doRequest newForwardClientConn error:", err)
+		return nil
+	}
+	defer clientConn.Close()
+	resp, err := clientConn.Do(req)
+
+	// resp, err := http.Get("http://kyfw.12306.cn/otn/passcodeNew/getPassCodeNew?module=login&rand=sjrand")
+	if err != nil {
+		fmt.Println("Client.Do:", err)
+		return nil
+	}
+	// beego.Info("")
+	defer resp.Body.Close()
+	img1, s, err := image.Decode(resp.Body)
+	fmt.Println(s)
+	if err != nil {
+		fmt.Println("Decode.Do:", err)
+		return nil
+	}
+	return img1
 }
