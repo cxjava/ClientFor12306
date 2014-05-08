@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httputil"
+	"strings"
 
 	"github.com/lxn/walk"
 
@@ -138,6 +139,27 @@ func updateImage() image.Image {
 	}
 	// beego.Info("")
 	defer resp.Body.Close()
+	cookie := []string{}
+	for k, v := range resp.Header {
+		fmt.Println(k, "=", v)
+		if k == "Set-Cookie" {
+			for a, b := range v {
+				fmt.Println(":", a, ":", b, ";")
+				dd := strings.Split(b, ";")[0]
+				cookie = append(cookie, dd)
+				cookie = append(cookie, "; ")
+			}
+			fmt.Println(len(cookie))
+			fmt.Println(strings.Join(cookie, ""))
+			// aaa := cookie[:len(cookie)-2]
+			d := strings.Join(cookie, "")
+			fmt.Println("aaaaaaa:==", d[:len(d)-2], "===")
+			fmt.Println("aaaaaaa:==" + d[:len(d)-2] + "===")
+			fmt.Println("aaaaaaa:==" + strings.Join(cookie, "") + "===")
+		}
+	}
+	fmt.Println(resp.Header.Get("Set-Cookie"))
+	fmt.Println(resp.Header.Get("Set-Cookie"))
 	img1, s, err := image.Decode(resp.Body)
 	fmt.Println(s)
 	if err != nil {
