@@ -1,9 +1,11 @@
 package main
 
 import (
+	"encoding/json"
 	"image"
 	"log"
 	"net/http"
+	"net/url"
 	"strings"
 
 	_ "image/gif"
@@ -14,6 +16,10 @@ import (
 	. "github.com/lxn/walk/declarative"
 )
 
+var (
+	login = new(Login)
+)
+
 func main() {
 	createWin()
 }
@@ -22,8 +28,10 @@ func createWin() {
 	img1 := GetImage("113.57.187.29")
 
 	var mw *walk.MainWindow
-	var acceptPB *walk.PushButton
+	var submitPB *walk.PushButton
 	var iv *walk.ImageView
+	var db *walk.DataBinder
+	var ep walk.ErrorPresenter
 
 	bit, _ := walk.NewBitmapFromImage(img1)
 
@@ -32,6 +40,12 @@ func createWin() {
 		Title:    "Animal Details",
 		MinSize:  Size{180, 210},
 		Layout:   VBox{},
+		DataBinder: DataBinder{
+			AssignTo:       &db,
+			DataSource:     login,
+			ErrorPresenter: ErrorPresenterRef{&ep},
+		},
+
 		Children: []Widget{
 			Composite{
 				Layout: Grid{Columns: 2},
@@ -40,14 +54,16 @@ func createWin() {
 						Text: "用户名:",
 					},
 					LineEdit{
-						Name: "username",
+						MaxLength: 30,
+						Text:      Bind("Username"),
 					},
 
 					Label{
 						Text: "密　码:",
 					},
 					LineEdit{
-						Name:         "password",
+						MaxLength:    32,
+						Text:         Bind("Password"),
 						PasswordMode: true,
 					},
 
@@ -55,7 +71,8 @@ func createWin() {
 						Text: "验证码:",
 					},
 					LineEdit{
-						Name: "captcha",
+						MaxLength: 4,
+						Text:      Bind("Captcha"),
 					},
 					VSpacer{
 						ColumnSpan: 1,
@@ -66,7 +83,6 @@ func createWin() {
 						Image:       bit,
 						MinSize:     Size{78, 26},
 						MaxSize:     Size{78, 38},
-						Name:        "captcha1",
 						ToolTipText: "单击刷新验证码",
 						OnMouseUp: func(x, y int, button walk.MouseButton) {
 							img1 := GetImage("113.57.187.29")
@@ -79,11 +95,15 @@ func createWin() {
 						Size:       8,
 					},
 					PushButton{
-						// ColumnSpan: 2,
-						AssignTo: &acceptPB,
+						AssignTo: &submitPB,
 						Text:     "登陆",
 						OnClicked: func() {
-
+							if err := db.Submit(); err != nil {
+								Error("login faild! :", err)
+								return
+							}
+							Info(login)
+							Info(login.CheckRandCodeAnsyn("113.57.187.29"))
 						},
 					},
 				},
@@ -113,7 +133,10 @@ func GetImage(cdn string) image.Image {
 		return nil
 	}
 	defer resp.Body.Close()
-	Debug("==" + GetCookieFromRespHeader(resp) + "==")
+
+	login.Cookie = GetCookieFromRespHeader(resp)
+	Debug("==" + login.Cookie + "==")
+
 	img, s, err := image.Decode(resp.Body)
 	Debug("image type:", s)
 	if err != nil {
@@ -141,4 +164,51 @@ func GetCookieFromRespHeader(resp *http.Response) (cookie string) {
 	}
 	cookie = d[:len(d)-2]
 	return
+}
+
+func (l *Login) CheckRandCodeAnsyn(cdn string) bool {
+	b := url.Values{}
+	b.Add("randCode", l.Captcha)
+	b.Add("rand", Rand)
+	params, err := url.QueryUnescape(b.Encode())
+	if err != nil {
+		Error("CheckRandCodeAnsyn url.QueryUnescape error:", err)
+		return false
+	}
+
+	req, err := http.NewRequest("POST", CheckRandCodeURL, strings.NewReader(params))
+	if err != nil {
+		Error("CheckRandCodeAnsyn http.NewRequest error:", err)
+		return false
+	}
+	AddReqestHeader(req, "POST")
+
+	con, err := NewForwardClientConn(cdn, req.URL.Scheme)
+	if err != nil {
+		Error("CheckRandCodeAnsyn newForwardClientConn error:", err)
+		return false
+	}
+	defer con.Close()
+	resp, err := con.Do(req)
+	if err != nil {
+		Error("CheckRandCodeAnsyn con.Do error:", err)
+		return false
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		Error("CheckRandCodeAnsyn StatusCode:", resp.StatusCode, resp.Header, resp.Cookies())
+		return false
+	}
+	content := ParseResponseBody(resp)
+	Debug("CheckRandCodeAnsyn content:", content)
+
+	crc := new(CheckRandCode)
+
+	if err := json.Unmarshal([]byte(content), &crc); err != nil {
+		Error("CheckRandCodeAnsyn json.Unmarshal error:", err)
+		return false
+	}
+	Info(crc)
+	return crc.Data == "Y"
 }

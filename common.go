@@ -20,18 +20,18 @@ func AddReqestHeader(request *http.Request, method string) {
 	request.Header.Set("Accept", "*/*")
 	request.Header.Set("X-Requested-With", "XMLHttpRequest")
 	request.Header.Set("If-Modified-Since", "0")
-	request.Header.Set("Content-Length", fmt.Sprintf("%d", request.ContentLength))
 	request.Header.Set("User-Agent", UserAgent)
 	request.Header.Set("DNT", "1")
 
 	if method == "POST" {
+		request.Header.Set("Content-Length", fmt.Sprintf("%d", request.ContentLength))
 		request.Header.Set("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
 	}
 
 	request.Header.Set("Referer", "https://kyfw.12306.cn/otn/leftTicket/init")
 	request.Header.Set("Accept-Encoding", "gzip,deflate,sdch")
 	request.Header.Set("Accept-Language", "zh-CN,zh;q=0.8")
-	// request.Header.Set("Cookie", Config.Login.Cookie)
+	request.Header.Set("Cookie", login.Cookie)
 }
 
 //读取响应
