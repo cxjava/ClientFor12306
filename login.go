@@ -13,3 +13,12 @@ type CheckRandCode struct {
 	Messages         []interface{} `json:"messages,omitempty"`
 	ValidateMessages interface{}   `json:"validateMessages,omitempty"`
 }
+
+type LoginAysnSuggest struct {
+	Basic
+	Data struct {
+		LoginCheck string `json:"loginCheck"`
+	}
+	Messages         []interface{} `json:"messages,omitempty"`
+	ValidateMessages interface{}   `json:"validateMessages,omitempty"`
+}

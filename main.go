@@ -104,6 +104,7 @@ func createWin() {
 							}
 							Info(login)
 							Info(login.CheckRandCodeAnsyn("113.57.187.29"))
+							Info(login.Login("113.57.187.29"))
 						},
 					},
 				},
@@ -211,4 +212,52 @@ func (l *Login) CheckRandCodeAnsyn(cdn string) bool {
 	}
 	Info(crc)
 	return crc.Data == "Y"
+}
+
+func (l *Login) Login(cdn string) bool {
+	b := url.Values{}
+	b.Add("loginUserDTO.user_name", l.Username)
+	b.Add("userDTO.password", l.Password)
+	b.Add("randCode", l.Captcha)
+	params, err := url.QueryUnescape(b.Encode())
+	if err != nil {
+		Error("Login url.QueryUnescape error:", err)
+		return false
+	}
+
+	req, err := http.NewRequest("POST", LoginAysnSuggestURL, strings.NewReader(params))
+	if err != nil {
+		Error("Login http.NewRequest error:", err)
+		return false
+	}
+	AddReqestHeader(req, "POST")
+
+	con, err := NewForwardClientConn(cdn, req.URL.Scheme)
+	if err != nil {
+		Error("Login newForwardClientConn error:", err)
+		return false
+	}
+	defer con.Close()
+	resp, err := con.Do(req)
+	if err != nil {
+		Error("Login con.Do error:", err)
+		return false
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		Error("Login StatusCode:", resp.StatusCode, resp.Header, resp.Cookies())
+		return false
+	}
+	content := ParseResponseBody(resp)
+	Info("Login content:", content)
+
+	las := new(LoginAysnSuggest)
+
+	if err := json.Unmarshal([]byte(content), &las); err != nil {
+		Error("Login json.Unmarshal error:", err)
+		return false
+	}
+	Info(las)
+	return las.Data.LoginCheck == "Y"
 }
