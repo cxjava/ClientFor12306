@@ -2,10 +2,10 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"image"
 	"log"
 	"net/http"
-	"net/url"
 	"strings"
 
 	_ "image/gif"
@@ -25,7 +25,7 @@ type MyMainWindow struct {
 }
 
 func main() {
-	createWin()
+	createLoginWin()
 }
 
 var (
@@ -35,16 +35,46 @@ var (
 	cp       *walk.LineEdit
 	db       *walk.DataBinder
 	ep       walk.ErrorPresenter
-	bit      *walk.Bitmap
+	Im       *walk.Bitmap
 )
 
-func createWin() {
-	img1 := GetImage(Conf.CDN[0])
+func main2() {
+	var mw *walk.MainWindow
+	var outTE *walk.TextEdit
 
-	bit, _ = walk.NewBitmapFromImage(img1)
+	if _, err := (MainWindow{
+		AssignTo: &mw,
+		Title:    "Walk Data Binding Example",
+		MinSize:  Size{300, 200},
+		Layout:   VBox{},
+		Children: []Widget{
+			PushButton{
+				Text: "Edit Animal",
+				OnClicked: func() {
+					getPassengerDTO()
+				},
+			},
+			Label{
+				Text: "animal:",
+			},
+			TextEdit{
+				AssignTo: &outTE,
+				ReadOnly: true,
+				Text:     fmt.Sprintf("%+v", login),
+			},
+		},
+	}.Run()); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func createLoginWin() {
+	i := GetImage(Conf.CDN[0])
+	Im, _ = walk.NewBitmapFromImage(i)
+
 	if _, err := (MainWindow{
 		AssignTo: &mw.MainWindow,
-		Title:    "Animal Details",
+		Title:    "登陆",
 		MinSize:  Size{180, 210},
 		Layout:   VBox{},
 		DataBinder: DataBinder{
@@ -97,14 +127,14 @@ func createWin() {
 					},
 					ImageView{
 						AssignTo:    &iv,
-						Image:       bit,
+						Image:       Im,
 						MinSize:     Size{78, 26},
 						MaxSize:     Size{78, 38},
 						ToolTipText: "单击刷新验证码",
 						OnMouseUp: func(x, y int, button walk.MouseButton) {
-							img1 := GetImage(Conf.CDN[0])
-							bit, _ = walk.NewBitmapFromImage(img1)
-							iv.SetImage(bit)
+							i := GetImage(Conf.CDN[0])
+							Im, _ = walk.NewBitmapFromImage(i)
+							iv.SetImage(Im)
 						},
 					},
 					VSpacer{
@@ -177,54 +207,7 @@ func GetCookieFromRespHeader(resp *http.Response) (cookie string) {
 	return
 }
 
-func (l *Login) CheckRandCodeAnsyn(cdn string) (r bool, msg []string) {
-	b := url.Values{}
-	b.Add("randCode", l.Captcha)
-	b.Add("rand", Rand)
-	params, err := url.QueryUnescape(b.Encode())
-	if err != nil {
-		Error("CheckRandCodeAnsyn url.QueryUnescape error:", err)
-		return false, []string{err.Error()}
-	}
-	content, err := DoForWardRequest(cdn, "POST", CheckRandCodeURL, strings.NewReader(params))
-	if err != nil {
-		Error("CheckRandCodeAnsyn DoForWardRequest error:", err)
-		return false, []string{err.Error()}
-	}
-	crc := new(CheckRandCode)
-
-	if err := json.Unmarshal([]byte(content), &crc); err != nil {
-		Error("CheckRandCodeAnsyn json.Unmarshal error:", err)
-		return false, []string{err.Error()}
-	}
-	Info(crc)
-	return crc.Data == "Y", crc.Messages
-}
-
-func (l *Login) Login(cdn string) (r bool, msg []string) {
-	b := url.Values{}
-	b.Add("loginUserDTO.user_name", l.Username)
-	b.Add("userDTO.password", l.Password)
-	b.Add("randCode", l.Captcha)
-	params, err := url.QueryUnescape(b.Encode())
-	if err != nil {
-		Error("Login url.QueryUnescape error:", err)
-		return false, []string{err.Error()}
-	}
-	content, err := DoForWardRequest(cdn, "POST", LoginAysnSuggestURL, strings.NewReader(params))
-	if err != nil {
-		Error("CheckRandCodeAnsyn DoForWardRequest error:", err)
-		return false, []string{err.Error()}
-	}
-
-	las := new(LoginAysnSuggest)
-	if err := json.Unmarshal([]byte(content), &las); err != nil {
-		Error("Login json.Unmarshal error:", err)
-		return false, []string{err.Error()}
-	}
-	Info(las)
-	return las.Data.LoginCheck == "Y", las.Messages
-}
+//登录逻辑
 func (mw *MyMainWindow) Submit() {
 	if err := db.Submit(); err != nil {
 		Error("login faild! :", err)
@@ -247,11 +230,42 @@ func (mw *MyMainWindow) Submit() {
 			msg = m[0]
 		}
 		walk.MsgBox(mw, "提示", msg, walk.MsgBoxIconInformation)
-		img1 := GetImage(Conf.CDN[0])
-		bit, _ = walk.NewBitmapFromImage(img1)
-		iv.SetImage(bit)
+		img := GetImage(Conf.CDN[0])
+		Im, _ = walk.NewBitmapFromImage(img)
+		iv.SetImage(Im)
 		cp.SetText("")
 		cp.SetFocus()
 		return
 	}
+	mw.Dispose()
+	main2()
+
+}
+
+//获取联系人
+func getPassengerDTO() {
+	passenger := new(PassengerDTO)
+	for _, cdn := range Conf.CDN {
+		Info("开始获取联系人！")
+		body, err := DoForWardRequest(cdn, "POST", GetPassengerDTOURL, nil)
+		if err != nil {
+			Error("getPassengerDTO DoForWardRequest error:", err)
+			continue
+		}
+		Debug("getPassengerDTO body:", body)
+
+		if !strings.Contains(body, "passenger_name") {
+			Error("获取联系人出错!!!!!!返回:", body)
+			continue
+		}
+
+		if err := json.Unmarshal([]byte(body), &passenger); err != nil {
+			Error("getPassengerDTO", cdn, err)
+			continue
+		} else {
+			Info(cdn, "获取成功！")
+			break
+		}
+	}
+	Info(passenger)
 }
