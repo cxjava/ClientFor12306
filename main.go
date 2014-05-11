@@ -176,34 +176,11 @@ func (l *Login) CheckRandCodeAnsyn(cdn string) bool {
 		Error("CheckRandCodeAnsyn url.QueryUnescape error:", err)
 		return false
 	}
-
-	req, err := http.NewRequest("POST", CheckRandCodeURL, strings.NewReader(params))
+	content, err := DoForWardRequest(cdn, "POST", CheckRandCodeURL, strings.NewReader(params))
 	if err != nil {
-		Error("CheckRandCodeAnsyn http.NewRequest error:", err)
+		Error("CheckRandCodeAnsyn DoForWardRequest error:", err)
 		return false
 	}
-	AddReqestHeader(req, "POST")
-
-	con, err := NewForwardClientConn(cdn, req.URL.Scheme)
-	if err != nil {
-		Error("CheckRandCodeAnsyn newForwardClientConn error:", err)
-		return false
-	}
-	defer con.Close()
-	resp, err := con.Do(req)
-	if err != nil {
-		Error("CheckRandCodeAnsyn con.Do error:", err)
-		return false
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		Error("CheckRandCodeAnsyn StatusCode:", resp.StatusCode, resp.Header, resp.Cookies())
-		return false
-	}
-	content := ParseResponseBody(resp)
-	Debug("CheckRandCodeAnsyn content:", content)
-
 	crc := new(CheckRandCode)
 
 	if err := json.Unmarshal([]byte(content), &crc); err != nil {
@@ -224,36 +201,13 @@ func (l *Login) Login(cdn string) bool {
 		Error("Login url.QueryUnescape error:", err)
 		return false
 	}
-
-	req, err := http.NewRequest("POST", LoginAysnSuggestURL, strings.NewReader(params))
+	content, err := DoForWardRequest(cdn, "POST", LoginAysnSuggestURL, strings.NewReader(params))
 	if err != nil {
-		Error("Login http.NewRequest error:", err)
+		Error("CheckRandCodeAnsyn DoForWardRequest error:", err)
 		return false
 	}
-	AddReqestHeader(req, "POST")
-
-	con, err := NewForwardClientConn(cdn, req.URL.Scheme)
-	if err != nil {
-		Error("Login newForwardClientConn error:", err)
-		return false
-	}
-	defer con.Close()
-	resp, err := con.Do(req)
-	if err != nil {
-		Error("Login con.Do error:", err)
-		return false
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		Error("Login StatusCode:", resp.StatusCode, resp.Header, resp.Cookies())
-		return false
-	}
-	content := ParseResponseBody(resp)
-	Info("Login content:", content)
 
 	las := new(LoginAysnSuggest)
-
 	if err := json.Unmarshal([]byte(content), &las); err != nil {
 		Error("Login json.Unmarshal error:", err)
 		return false

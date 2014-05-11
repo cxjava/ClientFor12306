@@ -4,6 +4,7 @@ import (
 	"compress/gzip"
 	"crypto/tls"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -11,6 +12,40 @@ import (
 	"strconv"
 	"strings"
 )
+
+//转发
+func DoForWardRequest(cdn, method, requestUrl string, body io.Reader) (string, error) {
+	req, err := http.NewRequest("POST", requestUrl, body)
+	if err != nil {
+		Error("DoForWardRequest http.NewRequest error:", err)
+		return "", err
+	}
+	AddReqestHeader(req, "POST")
+
+	con, err := NewForwardClientConn(cdn, req.URL.Scheme)
+	if err != nil {
+		Error("DoForWardRequest newForwardClientConn error:", err)
+		return "", err
+	}
+	defer con.Close()
+	resp, err := con.Do(req)
+	if err != nil {
+		Error("DoForWardRequest con.Do error:", err)
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		Error("DoForWardRequest StatusCode:", resp.StatusCode)
+		for k, v := range resp.Header {
+			Error("k=", k, "v=", v)
+		}
+		return "", err
+	}
+	content := ParseResponseBody(resp)
+	Debug("DoForWardRequest content:", content)
+	return content, nil
+}
 
 //添加头
 func AddReqestHeader(request *http.Request, method string) {
