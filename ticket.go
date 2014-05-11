@@ -5,10 +5,13 @@ import "time"
 type TicketQueryInfo struct {
 	TrainDate          time.Time
 	FromStations       []string
+	FromStationsStr    string
 	ToStations         []string
-	TicketType         string
-	SeatType           string
+	ToStationsStr      string
+	TicketType         string //车票类型：成人票，学生票
+	SeatType           string //席别：硬卧，硬座
 	Trians             []string
+	TriansStr          string
 	Passengers         []string
 	PassengerTicketStr string
 	OldPassengerStr    string

@@ -2,11 +2,11 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"image"
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	_ "image/gif"
 	_ "image/jpeg"
@@ -17,7 +17,8 @@ import (
 )
 
 var (
-	login = new(Login)
+	login  = new(Login)
+	ticket = new(TicketQueryInfo)
 )
 
 type MyMainWindow struct {
@@ -25,42 +26,163 @@ type MyMainWindow struct {
 }
 
 func main() {
-	createLoginWin()
+	app := walk.App()
+
+	// These specify the app data sub directory for the settings file.
+	app.SetOrganizationName("The Walk Authors")
+	app.SetProductName("Walk Settings Example")
+
+	// Settings file name.
+	settings := walk.NewIniFileSettings("settings.ini")
+
+	// All settings marked as expiring will expire after this duration w/o use.
+	// This applies to all widgets settings.
+	settings.SetExpireDuration(time.Hour * 24 * 30 * 3)
+
+	if err := settings.Load(); err != nil {
+		log.Fatal(err)
+	}
+
+	app.SetSettings(settings)
+
+	createTicketWin()
+	// createLoginWin()
+
+	if err := settings.Save(); err != nil {
+		log.Fatal(err)
+	}
+
 }
 
 var (
-	mw       = new(MyMainWindow)
-	submitPB *walk.PushButton
-	iv       *walk.ImageView
-	cp       *walk.LineEdit
-	db       *walk.DataBinder
-	ep       walk.ErrorPresenter
-	Im       *walk.Bitmap
+	mw           = new(MyMainWindow)
+	loginButton  *walk.PushButton
+	captchaImage *walk.ImageView
+	captchaEdit  *walk.LineEdit
+	loginDB      *walk.DataBinder
+	loginEP      walk.ErrorPresenter
+
+	ticketWin          = new(MyMainWindow)
+	ticketDB           *walk.DataBinder
+	ticketEP           walk.ErrorPresenter
+	submitCaptchaImage *walk.ImageView
+	submitCaptchaEdit  *walk.LineEdit
 )
 
-func main2() {
-	var mw *walk.MainWindow
-	var outTE *walk.TextEdit
+func createTicketWin() {
 
 	if _, err := (MainWindow{
-		AssignTo: &mw,
-		Title:    "Walk Data Binding Example",
-		MinSize:  Size{300, 200},
+		Name:     "ticketWindow",
+		AssignTo: &ticketWin.MainWindow,
+		Title:    "订票查询 -  by Charles",
+		MinSize:  Size{300, 300},
 		Layout:   VBox{},
+		DataBinder: DataBinder{
+			AssignTo:       &ticketDB,
+			DataSource:     ticket,
+			ErrorPresenter: ErrorPresenterRef{&ticketEP},
+		},
 		Children: []Widget{
-			PushButton{
-				Text: "Edit Animal",
-				OnClicked: func() {
-					getPassengerDTO()
+			Composite{
+				Layout: Grid{Columns: 4},
+				Name:   "ticketPanel",
+				Children: []Widget{
+					Label{
+						Text: "出发日期:",
+					},
+					DateEdit{
+						// MinDate: time.Now(),
+						// MaxDate: time.Now().AddDate(0, 0, 20),
+						Date: Bind("TrainDate"),
+					},
+					Label{
+						Text: "席　别:",
+					},
+					ComboBox{
+						Value:         Bind("SeatType", SelRequired{}),
+						BindingMember: "Value",
+						DisplayMember: "Name",
+						Model:         KnownSeatTypeName(),
+					},
+
+					Label{
+						Text: "出发地:",
+					},
+					LineEdit{
+						ColumnSpan: 3,
+						MaxLength:  32,
+						Text:       Bind("FromStationsStr"),
+					},
+
+					Label{
+						Text: "目的地:",
+					},
+					LineEdit{
+						ColumnSpan: 3,
+						MaxLength:  32,
+						Text:       Bind("ToStationsStr"),
+					},
+
+					Label{
+						Text: "车　次:",
+					},
+					LineEdit{
+						ColumnSpan: 3,
+						MaxLength:  32,
+						Text:       Bind("TriansStr"),
+					},
+
+					Label{
+						Text: "验证码:",
+					},
+					LineEdit{
+						AssignTo:  &submitCaptchaEdit,
+						MaxLength: 4,
+						OnKeyUp: func(key walk.Key) {
+							if key == walk.KeyReturn && len(submitCaptchaEdit.Text()) == 4 {
+								// mw.Submit()
+							}
+							// if len(captchaEdit.Text()) == 4 {
+							// 	Info("no enter")
+							// 	mw.Submit()
+							// }
+						},
+					},
+					VSpacer{
+						ColumnSpan: 2,
+						Size:       8,
+					},
+					VSpacer{
+						ColumnSpan: 1,
+						Size:       8,
+					},
+					ImageView{
+						ColumnSpan: 1,
+						AssignTo:   &submitCaptchaImage,
+						// Image:       Im,
+						MinSize:     Size{78, 38},
+						MaxSize:     Size{78, 38},
+						ToolTipText: "单击刷新验证码",
+						OnMouseUp: func(x, y int, button walk.MouseButton) {
+							i := GetImage(Conf.CDN[0])
+							Im, _ := walk.NewBitmapFromImage(i)
+							submitCaptchaImage.SetImage(Im)
+						},
+					},
+					VSpacer{
+						ColumnSpan: 2,
+						Size:       8,
+					},
+					VSpacer{
+						ColumnSpan: 1,
+						Size:       8,
+					},
+					PushButton{
+						// AssignTo:  &loginButton,
+						Text: "查询",
+						// OnClicked: mw.Submit,
+					},
 				},
-			},
-			Label{
-				Text: "animal:",
-			},
-			TextEdit{
-				AssignTo: &outTE,
-				ReadOnly: true,
-				Text:     fmt.Sprintf("%+v", login),
 			},
 		},
 	}.Run()); err != nil {
@@ -69,28 +191,34 @@ func main2() {
 }
 
 func createLoginWin() {
-	i := GetImage(Conf.CDN[0])
-	Im, _ = walk.NewBitmapFromImage(i)
+	go func() {
+		i := GetImage(Conf.CDN[0])
+		Im, _ := walk.NewBitmapFromImage(i)
+		captchaImage.SetImage(Im)
+	}()
 
 	if _, err := (MainWindow{
+		Name:     "loginWindow",
 		AssignTo: &mw.MainWindow,
 		Title:    "登陆",
-		MinSize:  Size{180, 210},
+		MinSize:  Size{250, 250},
 		Layout:   VBox{},
 		DataBinder: DataBinder{
-			AssignTo:       &db,
+			AssignTo:       &loginDB,
 			DataSource:     login,
-			ErrorPresenter: ErrorPresenterRef{&ep},
+			ErrorPresenter: ErrorPresenterRef{&loginEP},
 		},
 
 		Children: []Widget{
 			Composite{
 				Layout: Grid{Columns: 2},
+				Name:   "loginPanel",
 				Children: []Widget{
 					Label{
 						Text: "用户名:",
 					},
 					LineEdit{
+						Name:      "Username",
 						MaxLength: 30,
 						Text:      Bind("Username"),
 					},
@@ -99,6 +227,7 @@ func createLoginWin() {
 						Text: "密　码:",
 					},
 					LineEdit{
+						Name:         "Password",
 						MaxLength:    32,
 						Text:         Bind("Password"),
 						PasswordMode: true,
@@ -108,14 +237,14 @@ func createLoginWin() {
 						Text: "验证码:",
 					},
 					LineEdit{
-						AssignTo:  &cp,
+						AssignTo:  &captchaEdit,
 						MaxLength: 4,
 						Text:      Bind("Captcha"),
 						OnKeyUp: func(key walk.Key) {
-							if key == walk.KeyReturn && len(cp.Text()) == 4 {
+							if key == walk.KeyReturn && len(captchaEdit.Text()) == 4 {
 								mw.Submit()
 							}
-							// if len(cp.Text()) == 4 {
+							// if len(captchaEdit.Text()) == 4 {
 							// 	Info("no enter")
 							// 	mw.Submit()
 							// }
@@ -126,15 +255,15 @@ func createLoginWin() {
 						Size:       8,
 					},
 					ImageView{
-						AssignTo:    &iv,
-						Image:       Im,
-						MinSize:     Size{78, 26},
-						MaxSize:     Size{78, 38},
+						AssignTo: &captchaImage,
+						// Image:       Im,
+						MinSize:     Size{150, 60},
+						MaxSize:     Size{150, 60},
 						ToolTipText: "单击刷新验证码",
 						OnMouseUp: func(x, y int, button walk.MouseButton) {
 							i := GetImage(Conf.CDN[0])
-							Im, _ = walk.NewBitmapFromImage(i)
-							iv.SetImage(Im)
+							Im, _ := walk.NewBitmapFromImage(i)
+							captchaImage.SetImage(Im)
 						},
 					},
 					VSpacer{
@@ -142,7 +271,7 @@ func createLoginWin() {
 						Size:       8,
 					},
 					PushButton{
-						AssignTo:  &submitPB,
+						AssignTo:  &loginButton,
 						Text:      "登陆",
 						OnClicked: mw.Submit,
 					},
@@ -209,7 +338,7 @@ func GetCookieFromRespHeader(resp *http.Response) (cookie string) {
 
 //登录逻辑
 func (mw *MyMainWindow) Submit() {
-	if err := db.Submit(); err != nil {
+	if err := loginDB.Submit(); err != nil {
 		Error("login faild! :", err)
 		return
 	}
@@ -219,8 +348,8 @@ func (mw *MyMainWindow) Submit() {
 		if len(m) > 0 {
 			msg = m[0]
 		}
-		cp.SetText("")
-		cp.SetFocus()
+		captchaEdit.SetText("")
+		captchaEdit.SetFocus()
 		walk.MsgBox(mw, "提示", msg, walk.MsgBoxIconInformation)
 		return
 	}
@@ -231,14 +360,14 @@ func (mw *MyMainWindow) Submit() {
 		}
 		walk.MsgBox(mw, "提示", msg, walk.MsgBoxIconInformation)
 		img := GetImage(Conf.CDN[0])
-		Im, _ = walk.NewBitmapFromImage(img)
-		iv.SetImage(Im)
-		cp.SetText("")
-		cp.SetFocus()
+		Im, _ := walk.NewBitmapFromImage(img)
+		captchaImage.SetImage(Im)
+		captchaEdit.SetText("")
+		captchaEdit.SetFocus()
 		return
 	}
 	mw.Dispose()
-	main2()
+	createTicketWin()
 
 }
 
