@@ -9,9 +9,9 @@ type Login struct {
 
 type CheckRandCode struct {
 	Basic
-	Data             string        `json:"data"`
-	Messages         []interface{} `json:"messages,omitempty"`
-	ValidateMessages interface{}   `json:"validateMessages,omitempty"`
+	Data             string      `json:"data"`
+	Messages         []string    `json:"messages,omitempty"`
+	ValidateMessages interface{} `json:"validateMessages,omitempty"`
 }
 
 type LoginAysnSuggest struct {
@@ -19,6 +19,6 @@ type LoginAysnSuggest struct {
 	Data struct {
 		LoginCheck string `json:"loginCheck"`
 	}
-	Messages         []interface{} `json:"messages,omitempty"`
-	ValidateMessages interface{}   `json:"validateMessages,omitempty"`
+	Messages         []string    `json:"messages,omitempty"`
+	ValidateMessages interface{} `json:"validateMessages,omitempty"`
 }

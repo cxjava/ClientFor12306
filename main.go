@@ -20,23 +20,30 @@ var (
 	login = new(Login)
 )
 
+type MyMainWindow struct {
+	*walk.MainWindow
+}
+
 func main() {
 	createWin()
 }
 
+var (
+	mw       = new(MyMainWindow)
+	submitPB *walk.PushButton
+	iv       *walk.ImageView
+	cp       *walk.LineEdit
+	db       *walk.DataBinder
+	ep       walk.ErrorPresenter
+	bit      *walk.Bitmap
+)
+
 func createWin() {
-	img1 := GetImage("113.57.187.29")
+	img1 := GetImage(Conf.CDN[0])
 
-	var mw *walk.MainWindow
-	var submitPB *walk.PushButton
-	var iv *walk.ImageView
-	var db *walk.DataBinder
-	var ep walk.ErrorPresenter
-
-	bit, _ := walk.NewBitmapFromImage(img1)
-
+	bit, _ = walk.NewBitmapFromImage(img1)
 	if _, err := (MainWindow{
-		AssignTo: &mw,
+		AssignTo: &mw.MainWindow,
 		Title:    "Animal Details",
 		MinSize:  Size{180, 210},
 		Layout:   VBox{},
@@ -71,8 +78,18 @@ func createWin() {
 						Text: "验证码:",
 					},
 					LineEdit{
+						AssignTo:  &cp,
 						MaxLength: 4,
 						Text:      Bind("Captcha"),
+						OnKeyUp: func(key walk.Key) {
+							if key == walk.KeyReturn && len(cp.Text()) == 4 {
+								mw.Submit()
+							}
+							// if len(cp.Text()) == 4 {
+							// 	Info("no enter")
+							// 	mw.Submit()
+							// }
+						},
 					},
 					VSpacer{
 						ColumnSpan: 1,
@@ -85,7 +102,7 @@ func createWin() {
 						MaxSize:     Size{78, 38},
 						ToolTipText: "单击刷新验证码",
 						OnMouseUp: func(x, y int, button walk.MouseButton) {
-							img1 := GetImage("113.57.187.29")
+							img1 := GetImage(Conf.CDN[0])
 							bit, _ = walk.NewBitmapFromImage(img1)
 							iv.SetImage(bit)
 						},
@@ -95,17 +112,9 @@ func createWin() {
 						Size:       8,
 					},
 					PushButton{
-						AssignTo: &submitPB,
-						Text:     "登陆",
-						OnClicked: func() {
-							if err := db.Submit(); err != nil {
-								Error("login faild! :", err)
-								return
-							}
-							Info(login)
-							Info(login.CheckRandCodeAnsyn("113.57.187.29"))
-							Info(login.Login("113.57.187.29"))
-						},
+						AssignTo:  &submitPB,
+						Text:      "登陆",
+						OnClicked: mw.Submit,
 					},
 				},
 			},
@@ -134,7 +143,7 @@ func GetImage(cdn string) image.Image {
 		return nil
 	}
 	defer resp.Body.Close()
-
+	//set cookie
 	login.Cookie = GetCookieFromRespHeader(resp)
 	Debug("==" + login.Cookie + "==")
 
@@ -151,6 +160,7 @@ func GetImage(cdn string) image.Image {
 func GetCookieFromRespHeader(resp *http.Response) (cookie string) {
 	cookies := []string{}
 	for k, v := range resp.Header {
+		Info("k=", k, "v=", v)
 		if k == "Set-Cookie" {
 			for _, b := range v {
 				v := strings.Split(b, ";")[0]
@@ -167,31 +177,31 @@ func GetCookieFromRespHeader(resp *http.Response) (cookie string) {
 	return
 }
 
-func (l *Login) CheckRandCodeAnsyn(cdn string) bool {
+func (l *Login) CheckRandCodeAnsyn(cdn string) (r bool, msg []string) {
 	b := url.Values{}
 	b.Add("randCode", l.Captcha)
 	b.Add("rand", Rand)
 	params, err := url.QueryUnescape(b.Encode())
 	if err != nil {
 		Error("CheckRandCodeAnsyn url.QueryUnescape error:", err)
-		return false
+		return false, []string{err.Error()}
 	}
 	content, err := DoForWardRequest(cdn, "POST", CheckRandCodeURL, strings.NewReader(params))
 	if err != nil {
 		Error("CheckRandCodeAnsyn DoForWardRequest error:", err)
-		return false
+		return false, []string{err.Error()}
 	}
 	crc := new(CheckRandCode)
 
 	if err := json.Unmarshal([]byte(content), &crc); err != nil {
 		Error("CheckRandCodeAnsyn json.Unmarshal error:", err)
-		return false
+		return false, []string{err.Error()}
 	}
 	Info(crc)
-	return crc.Data == "Y"
+	return crc.Data == "Y", crc.Messages
 }
 
-func (l *Login) Login(cdn string) bool {
+func (l *Login) Login(cdn string) (r bool, msg []string) {
 	b := url.Values{}
 	b.Add("loginUserDTO.user_name", l.Username)
 	b.Add("userDTO.password", l.Password)
@@ -199,19 +209,49 @@ func (l *Login) Login(cdn string) bool {
 	params, err := url.QueryUnescape(b.Encode())
 	if err != nil {
 		Error("Login url.QueryUnescape error:", err)
-		return false
+		return false, []string{err.Error()}
 	}
 	content, err := DoForWardRequest(cdn, "POST", LoginAysnSuggestURL, strings.NewReader(params))
 	if err != nil {
 		Error("CheckRandCodeAnsyn DoForWardRequest error:", err)
-		return false
+		return false, []string{err.Error()}
 	}
 
 	las := new(LoginAysnSuggest)
 	if err := json.Unmarshal([]byte(content), &las); err != nil {
 		Error("Login json.Unmarshal error:", err)
-		return false
+		return false, []string{err.Error()}
 	}
 	Info(las)
-	return las.Data.LoginCheck == "Y"
+	return las.Data.LoginCheck == "Y", las.Messages
+}
+func (mw *MyMainWindow) Submit() {
+	if err := db.Submit(); err != nil {
+		Error("login faild! :", err)
+		return
+	}
+	Info(login)
+	if r, m := login.CheckRandCodeAnsyn(Conf.CDN[0]); !r {
+		msg := "验证码不正确！"
+		if len(m) > 0 {
+			msg = m[0]
+		}
+		cp.SetText("")
+		cp.SetFocus()
+		walk.MsgBox(mw, "提示", msg, walk.MsgBoxIconInformation)
+		return
+	}
+	if r, m := login.Login(Conf.CDN[0]); !r {
+		msg := "系统错误！"
+		if len(m) > 0 {
+			msg = m[0]
+		}
+		walk.MsgBox(mw, "提示", msg, walk.MsgBoxIconInformation)
+		img1 := GetImage(Conf.CDN[0])
+		bit, _ = walk.NewBitmapFromImage(img1)
+		iv.SetImage(bit)
+		cp.SetText("")
+		cp.SetFocus()
+		return
+	}
 }
