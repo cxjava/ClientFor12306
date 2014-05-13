@@ -44,7 +44,7 @@ func TestParseResponseBody(t *testing.T) {
 	}
 }
 func TestNewForwardClientConn(t *testing.T) {
-	con, err := NewForwardClientConn("113.57.187.29", "https")
+	con, err := NewForwardClientConn(Conf.CDN[0], "https")
 	if err != nil {
 		t.Fatal("error:", err)
 		return

@@ -43,7 +43,7 @@ func (l *Login) CheckRandCodeAnsyn(cdn string) (r bool, msg []string) {
 		Error("CheckRandCodeAnsyn DoForWardRequest error:", err)
 		return false, []string{err.Error()}
 	}
-	crc := new(CheckRandCode)
+	crc := &CheckRandCode{}
 
 	if err := json.Unmarshal([]byte(content), &crc); err != nil {
 		Error("CheckRandCodeAnsyn json.Unmarshal error:", err)
@@ -69,7 +69,7 @@ func (l *Login) Login(cdn string) (r bool, msg []string) {
 		return false, []string{err.Error()}
 	}
 
-	las := new(LoginAysnSuggest)
+	las := &LoginAysnSuggest{}
 	if err := json.Unmarshal([]byte(content), &las); err != nil {
 		Error("Login json.Unmarshal error:", err)
 		return false, []string{err.Error()}

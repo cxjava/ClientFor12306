@@ -17,8 +17,8 @@ import (
 )
 
 var (
-	login  = new(Login)
-	ticket = new(TicketQueryInfo)
+	login  = &Login{}
+	ticket = &TicketQueryInfo{}
 )
 
 type MyMainWindow struct {
@@ -55,18 +55,19 @@ func main() {
 }
 
 var (
-	mw           = new(MyMainWindow)
+	mw           = &MyMainWindow{}
 	loginButton  *walk.PushButton
 	captchaImage *walk.ImageView
 	captchaEdit  *walk.LineEdit
 	loginDB      *walk.DataBinder
 	loginEP      walk.ErrorPresenter
 
-	ticketWin          = new(MyMainWindow)
+	ticketWin          = &MyMainWindow{}
 	ticketDB           *walk.DataBinder
 	ticketEP           walk.ErrorPresenter
 	submitCaptchaImage *walk.ImageView
 	submitCaptchaEdit  *walk.LineEdit
+	seatTypeComboBox   *walk.ComboBox
 )
 
 func createTicketWin() {
@@ -99,10 +100,15 @@ func createTicketWin() {
 						Text: "席　别:",
 					},
 					ComboBox{
+						AssignTo:      &seatTypeComboBox,
 						Value:         Bind("SeatType", SelRequired{}),
 						BindingMember: "Value",
 						DisplayMember: "Name",
 						Model:         KnownSeatTypeName(),
+						OnCurrentIndexChanged: func() {
+							Info(seatTypeComboBox.DisplayMember(), seatTypeComboBox.Name())
+							Info(seatTypeComboBox.CurrentIndex(), seatTypeComboBox.Text(), seatTypeComboBox.BindingMember())
+						},
 					},
 
 					Label{
@@ -167,7 +173,15 @@ func createTicketWin() {
 							i := GetImage(Conf.CDN[0])
 							Im, _ := walk.NewBitmapFromImage(i)
 							submitCaptchaImage.SetImage(Im)
+							// seatTypeComboBox.SetCurrentIndex(6)
+							// seatTypeComboBox.SetDisplayMember("3")
+							// seatTypeComboBox.SetDisplayMember("硬卧")
+							seatTypeComboBox.SetText("硬卧")
 						},
+					},
+					LineErrorPresenter{
+						AssignTo:   &ticketEP,
+						ColumnSpan: 4,
 					},
 					VSpacer{
 						ColumnSpan: 2,
@@ -188,6 +202,7 @@ func createTicketWin() {
 	}.Run()); err != nil {
 		log.Fatal(err)
 	}
+
 }
 
 func createLoginWin() {
@@ -373,7 +388,7 @@ func (mw *MyMainWindow) Submit() {
 
 //获取联系人
 func getPassengerDTO() {
-	passenger := new(PassengerDTO)
+	passenger := &PassengerDTO{}
 	for _, cdn := range Conf.CDN {
 		Info("开始获取联系人！")
 		body, err := DoForWardRequest(cdn, "POST", GetPassengerDTOURL, nil)
