@@ -18,7 +18,13 @@ import (
 
 var (
 	login  = &Login{}
-	ticket = &TicketQueryInfo{}
+	ticket = &TicketQueryInfo{
+		P1: &PassengerOrder{},
+		P2: &PassengerOrder{},
+		P3: &PassengerOrder{},
+		P4: &PassengerOrder{},
+		P5: &PassengerOrder{},
+	}
 )
 
 type MyMainWindow struct {
@@ -67,16 +73,16 @@ var (
 	ticketEP           walk.ErrorPresenter
 	submitCaptchaImage *walk.ImageView
 	submitCaptchaEdit  *walk.LineEdit
+	submitCaptchaEdit1 *walk.LineEdit
 	seatTypeComboBox   *walk.ComboBox
 )
 
 func createTicketWin() {
-
 	if _, err := (MainWindow{
 		Name:     "ticketWindow",
 		AssignTo: &ticketWin.MainWindow,
 		Title:    "订票查询 -  by Charles",
-		MinSize:  Size{300, 300},
+		MinSize:  Size{300, 200},
 		Layout:   VBox{},
 		DataBinder: DataBinder{
 			AssignTo:       &ticketDB,
@@ -86,7 +92,8 @@ func createTicketWin() {
 		Children: []Widget{
 			Composite{
 				Layout: Grid{Columns: 4},
-				Name:   "ticketPanel",
+				// Layout: HBox{},
+				Name: "ticketPanel",
 				Children: []Widget{
 					Label{
 						Text: "出发日期:",
@@ -97,47 +104,187 @@ func createTicketWin() {
 						Date: Bind("TrainDate"),
 					},
 					Label{
-						Text: "席　别:",
+						Text: "车　次:",
 					},
-					ComboBox{
-						AssignTo:      &seatTypeComboBox,
-						Value:         Bind("SeatType", SelRequired{}),
-						BindingMember: "Value",
-						DisplayMember: "Name",
-						Model:         KnownSeatTypeName(),
-						OnCurrentIndexChanged: func() {
-							Info(seatTypeComboBox.DisplayMember(), seatTypeComboBox.Name())
-							Info(seatTypeComboBox.CurrentIndex(), seatTypeComboBox.Text(), seatTypeComboBox.BindingMember())
-						},
+					LineEdit{
+						MaxLength: 32,
+						Text:      Bind("TriansStr"),
 					},
-
 					Label{
 						Text: "出发地:",
 					},
 					LineEdit{
-						ColumnSpan: 3,
-						MaxLength:  32,
-						Text:       Bind("FromStationsStr"),
+						MaxLength: 32,
+						Text:      Bind("FromStationsStr"),
 					},
 
 					Label{
 						Text: "目的地:",
 					},
 					LineEdit{
-						ColumnSpan: 3,
-						MaxLength:  32,
-						Text:       Bind("ToStationsStr"),
+						MaxLength: 32,
+						Text:      Bind("ToStationsStr"),
 					},
-
-					Label{
-						Text: "车　次:",
+				},
+			},
+			Composite{
+				// Layout: HBox{},
+				Layout: Grid{Columns: 5},
+				Children: []Widget{
+					LineEdit{
+						// MaxLength: 32,
+						AssignTo: &submitCaptchaEdit1,
+						Text:     Bind("P1.Name"),
+					},
+					ComboBox{
+						Value:         Bind("P1.TicketType"),
+						BindingMember: "Id",
+						DisplayMember: "Name",
+						Model:         KnownTicketTypeName(),
+					},
+					ComboBox{
+						Value:         Bind("P1.PassengerIdTypeCode"),
+						BindingMember: "Id",
+						DisplayMember: "Name",
+						Model:         KnownIDTypeName(),
 					},
 					LineEdit{
-						ColumnSpan: 3,
-						MaxLength:  32,
-						Text:       Bind("TriansStr"),
+						MinSize: Size{66, 12},
+						MaxSize: Size{166, 112},
+						Text:    Bind("P1.PassengerIdNo"),
+					},
+					ComboBox{
+						// AssignTo:      &seatTypeComboBox,
+						Value:         Bind("P1.SeatType"),
+						BindingMember: "Value",
+						DisplayMember: "Name",
+						Model:         KnownSeatTypeName(),
 					},
 
+					LineEdit{
+						// MaxLength: 32,
+						AssignTo: &submitCaptchaEdit1,
+						Text:     Bind("P2.Name"),
+					},
+					ComboBox{
+						Value:         Bind("P2.TicketType"),
+						BindingMember: "Id",
+						DisplayMember: "Name",
+						Model:         KnownTicketTypeName(),
+					},
+					ComboBox{
+						Value:         Bind("P2.PassengerIdTypeCode"),
+						BindingMember: "Id",
+						DisplayMember: "Name",
+						Model:         KnownIDTypeName(),
+					},
+					LineEdit{
+						MinSize: Size{66, 12},
+						MaxSize: Size{166, 112},
+						Text:    Bind("P2.PassengerIdNo"),
+					},
+					ComboBox{
+						// AssignTo:      &seatTypeComboBox,
+						Value:         Bind("P2.SeatType"),
+						BindingMember: "Value",
+						DisplayMember: "Name",
+						Model:         KnownSeatTypeName(),
+					},
+
+					LineEdit{
+						// MaxLength: 32,
+						AssignTo: &submitCaptchaEdit1,
+						Text:     Bind("P3.Name"),
+					},
+					ComboBox{
+						Value:         Bind("P3.TicketType"),
+						BindingMember: "Id",
+						DisplayMember: "Name",
+						Model:         KnownTicketTypeName(),
+					},
+					ComboBox{
+						Value:         Bind("P3.PassengerIdTypeCode"),
+						BindingMember: "Id",
+						DisplayMember: "Name",
+						Model:         KnownIDTypeName(),
+					},
+					LineEdit{
+						MinSize: Size{66, 12},
+						MaxSize: Size{166, 112},
+						Text:    Bind("P3.PassengerIdNo"),
+					},
+					ComboBox{
+						// AssignTo:      &seatTypeComboBox,
+						Value:         Bind("P3.SeatType"),
+						BindingMember: "Value",
+						DisplayMember: "Name",
+						Model:         KnownSeatTypeName(),
+					},
+
+					LineEdit{
+						// MaxLength: 32,
+						AssignTo: &submitCaptchaEdit1,
+						Text:     Bind("P4.Name"),
+					},
+					ComboBox{
+						Value:         Bind("P4.TicketType"),
+						BindingMember: "Id",
+						DisplayMember: "Name",
+						Model:         KnownTicketTypeName(),
+					},
+					ComboBox{
+						Value:         Bind("P4.PassengerIdTypeCode"),
+						BindingMember: "Id",
+						DisplayMember: "Name",
+						Model:         KnownIDTypeName(),
+					},
+					LineEdit{
+						MinSize: Size{66, 12},
+						MaxSize: Size{166, 112},
+						Text:    Bind("P4.PassengerIdNo"),
+					},
+					ComboBox{
+						// AssignTo:      &seatTypeComboBox,
+						Value:         Bind("P4.SeatType"),
+						BindingMember: "Value",
+						DisplayMember: "Name",
+						Model:         KnownSeatTypeName(),
+					},
+
+					LineEdit{
+						// MaxLength: 32,
+						AssignTo: &submitCaptchaEdit1,
+						Text:     Bind("P5.Name"),
+					},
+					ComboBox{
+						Value:         Bind("P5.TicketType"),
+						BindingMember: "Id",
+						DisplayMember: "Name",
+						Model:         KnownTicketTypeName(),
+					},
+					ComboBox{
+						Value:         Bind("P5.PassengerIdTypeCode"),
+						BindingMember: "Id",
+						DisplayMember: "Name",
+						Model:         KnownIDTypeName(),
+					},
+					LineEdit{
+						MinSize: Size{66, 12},
+						MaxSize: Size{166, 112},
+						Text:    Bind("P5.PassengerIdNo"),
+					},
+					ComboBox{
+						// AssignTo:      &seatTypeComboBox,
+						Value:         Bind("P5.SeatType"),
+						BindingMember: "Value",
+						DisplayMember: "Name",
+						Model:         KnownSeatTypeName(),
+					},
+				},
+			},
+			Composite{
+				Layout: HBox{},
+				Children: []Widget{
 					Label{
 						Text: "验证码:",
 					},
@@ -148,49 +295,17 @@ func createTicketWin() {
 							if key == walk.KeyReturn && len(submitCaptchaEdit.Text()) == 4 {
 								// mw.Submit()
 							}
+							submitCaptchaEdit1.SetWidth(120)
 							// if len(captchaEdit.Text()) == 4 {
 							// 	Info("no enter")
 							// 	mw.Submit()
 							// }
 						},
 					},
-					VSpacer{
-						ColumnSpan: 2,
-						Size:       8,
-					},
-					VSpacer{
-						ColumnSpan: 1,
-						Size:       8,
-					},
-					ImageView{
-						ColumnSpan: 1,
-						AssignTo:   &submitCaptchaImage,
-						// Image:       Im,
-						MinSize:     Size{78, 38},
-						MaxSize:     Size{78, 38},
-						ToolTipText: "单击刷新验证码",
-						OnMouseUp: func(x, y int, button walk.MouseButton) {
-							i := GetImage(Conf.CDN[0])
-							Im, _ := walk.NewBitmapFromImage(i)
-							submitCaptchaImage.SetImage(Im)
-							// seatTypeComboBox.SetCurrentIndex(6)
-							// seatTypeComboBox.SetDisplayMember("3")
-							// seatTypeComboBox.SetDisplayMember("硬卧")
-							seatTypeComboBox.SetText("硬卧")
-						},
-					},
-					LineErrorPresenter{
-						AssignTo:   &ticketEP,
-						ColumnSpan: 4,
-					},
-					VSpacer{
-						ColumnSpan: 2,
-						Size:       8,
-					},
-					VSpacer{
-						ColumnSpan: 1,
-						Size:       8,
-					},
+
+					// LineErrorPresenter{
+					// 	AssignTo: &ticketEP,
+					// },
 					PushButton{
 						// AssignTo:  &loginButton,
 						Text: "查询",

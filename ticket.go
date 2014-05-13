@@ -2,19 +2,29 @@ package main
 
 import "time"
 
+type PassengerOrder struct {
+	Name                string
+	TicketType          string // 成人，学生
+	PassengerIdTypeCode string
+	PassengerIdNo       string
+	SeatType            string //席别：硬卧，硬座
+}
+
 type TicketQueryInfo struct {
 	TrainDate          time.Time
 	FromStations       []string
 	FromStationsStr    string
 	ToStations         []string
 	ToStationsStr      string
-	TicketType         string //车票类型：成人票，学生票
-	SeatType           string //席别：硬卧，硬座
 	Trians             []string
 	TriansStr          string
-	Passengers         []string
 	PassengerTicketStr string
 	OldPassengerStr    string
+	P1                 *PassengerOrder
+	P2                 *PassengerOrder
+	P3                 *PassengerOrder
+	P4                 *PassengerOrder
+	P5                 *PassengerOrder
 }
 
 type TicketTypeName struct {
@@ -28,6 +38,21 @@ func KnownTicketTypeName() []*TicketTypeName {
 		{"2", "小孩票"},
 		{"3", "学生票"},
 		{"4", "伤残军人票"},
+	}
+}
+
+type IDTypeName struct {
+	Id   string
+	Name string
+}
+
+func KnownIDTypeName() []*IDTypeName {
+	return []*IDTypeName{
+		{"1", "二代身份证"},
+		{"C", "港澳通行证"},
+		{"G", "台湾通行证"},
+		{"B", "护照"},
+		{"H", "外国人居留证"},
 	}
 }
 
