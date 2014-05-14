@@ -25,6 +25,28 @@ var (
 		P4: &PassengerOrder{},
 		P5: &PassengerOrder{},
 	}
+	passenger = &PassengerDTO{}
+)
+
+var (
+	mw           = &MyMainWindow{}
+	loginButton  *walk.PushButton
+	captchaImage *walk.ImageView
+	captchaEdit  *walk.LineEdit
+	loginDB      *walk.DataBinder
+	loginEP      walk.ErrorPresenter
+
+	ticketWin          = &MyMainWindow{}
+	ticketDB           *walk.DataBinder
+	ticketEP           walk.ErrorPresenter
+	submitCaptchaImage *walk.ImageView
+	username           *walk.LineEdit
+	password           *walk.LineEdit
+	submitCaptchaEdit  *walk.LineEdit
+	submitCaptchaEdit1 *walk.LineEdit
+	myPassengers       = &walk.ComboBox{}
+	mapPassengers      = make(map[string]Passenger)
+	passengers         *walk.Composite
 )
 
 type MyMainWindow struct {
@@ -51,31 +73,14 @@ func main() {
 
 	app.SetSettings(settings)
 
+	createLoginWin()
 	createTicketWin()
-	// createLoginWin()
 
 	if err := settings.Save(); err != nil {
 		log.Fatal(err)
 	}
 
 }
-
-var (
-	mw           = &MyMainWindow{}
-	loginButton  *walk.PushButton
-	captchaImage *walk.ImageView
-	captchaEdit  *walk.LineEdit
-	loginDB      *walk.DataBinder
-	loginEP      walk.ErrorPresenter
-
-	ticketWin          = &MyMainWindow{}
-	ticketDB           *walk.DataBinder
-	ticketEP           walk.ErrorPresenter
-	submitCaptchaImage *walk.ImageView
-	submitCaptchaEdit  *walk.LineEdit
-	submitCaptchaEdit1 *walk.LineEdit
-	seatTypeComboBox   *walk.ComboBox
-)
 
 func createTicketWin() {
 	if _, err := (MainWindow{
@@ -91,7 +96,7 @@ func createTicketWin() {
 		},
 		Children: []Widget{
 			Composite{
-				Layout: Grid{Columns: 4},
+				Layout: Grid{Columns: 5},
 				// Layout: HBox{},
 				Name: "ticketPanel",
 				Children: []Widget{
@@ -101,60 +106,77 @@ func createTicketWin() {
 					DateEdit{
 						// MinDate: time.Now(),
 						// MaxDate: time.Now().AddDate(0, 0, 20),
-						Date: Bind("TrainDate"),
+						Date: Bind("TrainDate", SelRequired{}),
 					},
 					Label{
 						Text: "车　次:",
 					},
 					LineEdit{
-						MaxLength: 32,
-						Text:      Bind("TriansStr"),
+						ToolTipText: "多个车次请以逗号分隔",
+						MaxLength:   32,
+						Text:        Bind("TriansStr", SelRequired{}),
 					},
+					VSpacer{
+						Size: 8,
+					},
+
 					Label{
 						Text: "出发地:",
 					},
 					LineEdit{
-						MaxLength: 32,
-						Text:      Bind("FromStationsStr"),
+						ToolTipText: "多个出发地请以逗号分隔",
+						MaxLength:   32,
+						Text:        Bind("FromStationsStr", SelRequired{}),
 					},
 
 					Label{
 						Text: "目的地:",
 					},
 					LineEdit{
-						MaxLength: 32,
-						Text:      Bind("ToStationsStr"),
+						MaxLength:   32,
+						ToolTipText: "多个目的地请以逗号分隔",
+						Text:        Bind("ToStationsStr", SelRequired{}),
+					},
+					ComboBox{
+						AssignTo:      &myPassengers,
+						BindingMember: "Value",
+						DisplayMember: "Name",
+						ToolTipText:   "选择联系人",
+						Model:         KnownSeatTypeName(),
+						OnCurrentIndexChanged: func() {
+							Info(myPassengers.Text())
+							Info(myPassengers)
+							Info(*myPassengers)
+						},
 					},
 				},
 			},
 			Composite{
-				// Layout: HBox{},
-				Layout: Grid{Columns: 5},
+				AssignTo: &passengers,
+				Layout:   Grid{Columns: 5},
 				Children: []Widget{
 					LineEdit{
-						// MaxLength: 32,
-						AssignTo: &submitCaptchaEdit1,
-						Text:     Bind("P1.Name"),
+						Text: Bind("P1.Name"),
 					},
 					ComboBox{
+						CurrentIndex:  0,
 						Value:         Bind("P1.TicketType"),
 						BindingMember: "Id",
 						DisplayMember: "Name",
 						Model:         KnownTicketTypeName(),
 					},
 					ComboBox{
+						CurrentIndex:  0,
 						Value:         Bind("P1.PassengerIdTypeCode"),
 						BindingMember: "Id",
 						DisplayMember: "Name",
 						Model:         KnownIDTypeName(),
 					},
 					LineEdit{
-						MinSize: Size{66, 12},
-						MaxSize: Size{166, 112},
+						MinSize: Size{140, 12},
 						Text:    Bind("P1.PassengerIdNo"),
 					},
 					ComboBox{
-						// AssignTo:      &seatTypeComboBox,
 						Value:         Bind("P1.SeatType"),
 						BindingMember: "Value",
 						DisplayMember: "Name",
@@ -162,9 +184,7 @@ func createTicketWin() {
 					},
 
 					LineEdit{
-						// MaxLength: 32,
-						AssignTo: &submitCaptchaEdit1,
-						Text:     Bind("P2.Name"),
+						Text: Bind("P2.Name"),
 					},
 					ComboBox{
 						Value:         Bind("P2.TicketType"),
@@ -179,12 +199,9 @@ func createTicketWin() {
 						Model:         KnownIDTypeName(),
 					},
 					LineEdit{
-						MinSize: Size{66, 12},
-						MaxSize: Size{166, 112},
-						Text:    Bind("P2.PassengerIdNo"),
+						Text: Bind("P2.PassengerIdNo"),
 					},
 					ComboBox{
-						// AssignTo:      &seatTypeComboBox,
 						Value:         Bind("P2.SeatType"),
 						BindingMember: "Value",
 						DisplayMember: "Name",
@@ -192,9 +209,7 @@ func createTicketWin() {
 					},
 
 					LineEdit{
-						// MaxLength: 32,
-						AssignTo: &submitCaptchaEdit1,
-						Text:     Bind("P3.Name"),
+						Text: Bind("P3.Name"),
 					},
 					ComboBox{
 						Value:         Bind("P3.TicketType"),
@@ -209,12 +224,9 @@ func createTicketWin() {
 						Model:         KnownIDTypeName(),
 					},
 					LineEdit{
-						MinSize: Size{66, 12},
-						MaxSize: Size{166, 112},
-						Text:    Bind("P3.PassengerIdNo"),
+						Text: Bind("P3.PassengerIdNo"),
 					},
 					ComboBox{
-						// AssignTo:      &seatTypeComboBox,
 						Value:         Bind("P3.SeatType"),
 						BindingMember: "Value",
 						DisplayMember: "Name",
@@ -222,9 +234,7 @@ func createTicketWin() {
 					},
 
 					LineEdit{
-						// MaxLength: 32,
-						AssignTo: &submitCaptchaEdit1,
-						Text:     Bind("P4.Name"),
+						Text: Bind("P4.Name"),
 					},
 					ComboBox{
 						Value:         Bind("P4.TicketType"),
@@ -239,12 +249,9 @@ func createTicketWin() {
 						Model:         KnownIDTypeName(),
 					},
 					LineEdit{
-						MinSize: Size{66, 12},
-						MaxSize: Size{166, 112},
-						Text:    Bind("P4.PassengerIdNo"),
+						Text: Bind("P4.PassengerIdNo"),
 					},
 					ComboBox{
-						// AssignTo:      &seatTypeComboBox,
 						Value:         Bind("P4.SeatType"),
 						BindingMember: "Value",
 						DisplayMember: "Name",
@@ -252,9 +259,7 @@ func createTicketWin() {
 					},
 
 					LineEdit{
-						// MaxLength: 32,
-						AssignTo: &submitCaptchaEdit1,
-						Text:     Bind("P5.Name"),
+						Text: Bind("P5.Name"),
 					},
 					ComboBox{
 						Value:         Bind("P5.TicketType"),
@@ -269,12 +274,9 @@ func createTicketWin() {
 						Model:         KnownIDTypeName(),
 					},
 					LineEdit{
-						MinSize: Size{66, 12},
-						MaxSize: Size{166, 112},
-						Text:    Bind("P5.PassengerIdNo"),
+						Text: Bind("P5.PassengerIdNo"),
 					},
 					ComboBox{
-						// AssignTo:      &seatTypeComboBox,
 						Value:         Bind("P5.SeatType"),
 						BindingMember: "Value",
 						DisplayMember: "Name",
@@ -283,7 +285,7 @@ func createTicketWin() {
 				},
 			},
 			Composite{
-				Layout: HBox{},
+				Layout: Grid{Columns: 5},
 				Children: []Widget{
 					Label{
 						Text: "验证码:",
@@ -295,21 +297,52 @@ func createTicketWin() {
 							if key == walk.KeyReturn && len(submitCaptchaEdit.Text()) == 4 {
 								// mw.Submit()
 							}
-							submitCaptchaEdit1.SetWidth(120)
+							// submitCaptchaEdit1.SetWidth(120)
 							// if len(captchaEdit.Text()) == 4 {
 							// 	Info("no enter")
 							// 	mw.Submit()
 							// }
 						},
 					},
+					ImageView{
+						AssignTo: &captchaImage,
+						// Image:       Im,
+						MinSize:     Size{78, 26},
+						MaxSize:     Size{78, 26},
+						ToolTipText: "单击刷新验证码",
+						OnMouseUp: func(x, y int, button walk.MouseButton) {
+							// i := GetImage(Conf.CDN[0])
+							// Im, _ := walk.NewBitmapFromImage(i)
+							// captchaImage.SetImage(Im)
 
-					// LineErrorPresenter{
-					// 	AssignTo: &ticketEP,
-					// },
+							// Info(ticketWin.MainWindow.
+							s, ok := passengers.Children().At(1).(*walk.ComboBox)
+							Info(ok, s)
+							s.SetCurrentIndex(1)
+
+							s2, ok2 := passengers.Children().At(0).(*walk.LineEdit)
+							Info(ok2, s2)
+							s2.SetText("CX")
+							getPassengerDTO()
+							// Info(ticketWin.Children().At(2).(type))
+							// ticketWin.Children().At(1).(walk.Composite).Children().At(1).(walk.ComboBox).SetCurrentIndex(1)
+							// ticket.P1.SeatType = "1"
+							// ticket.P1.TicketType = "1"
+						},
+					},
 					PushButton{
-						// AssignTo:  &loginButton,
 						Text: "查询",
-						// OnClicked: mw.Submit,
+						OnClicked: func() {
+							if err := ticketDB.Submit(); err != nil {
+								Error("login faild! :", err)
+								return
+							}
+							Info(ticket)
+							Info(ticket.P1)
+						},
+					},
+					LineErrorPresenter{
+						AssignTo: &ticketEP,
 					},
 				},
 			},
@@ -325,13 +358,15 @@ func createLoginWin() {
 		i := GetImage(Conf.CDN[0])
 		Im, _ := walk.NewBitmapFromImage(i)
 		captchaImage.SetImage(Im)
+		username.SetText("xuhong157499")
+		password.SetText("xuhong1990")
 	}()
 
 	if _, err := (MainWindow{
 		Name:     "loginWindow",
 		AssignTo: &mw.MainWindow,
 		Title:    "登陆",
-		MinSize:  Size{250, 250},
+		MinSize:  Size{70, 70},
 		Layout:   VBox{},
 		DataBinder: DataBinder{
 			AssignTo:       &loginDB,
@@ -348,6 +383,7 @@ func createLoginWin() {
 						Text: "用户名:",
 					},
 					LineEdit{
+						AssignTo:  &username,
 						Name:      "Username",
 						MaxLength: 30,
 						Text:      Bind("Username"),
@@ -357,6 +393,7 @@ func createLoginWin() {
 						Text: "密　码:",
 					},
 					LineEdit{
+						AssignTo:     &password,
 						Name:         "Password",
 						MaxLength:    32,
 						Text:         Bind("Password"),
@@ -387,8 +424,10 @@ func createLoginWin() {
 					ImageView{
 						AssignTo: &captchaImage,
 						// Image:       Im,
-						MinSize:     Size{150, 60},
-						MaxSize:     Size{150, 60},
+						// MinSize:     Size{150, 60},
+						// MaxSize:     Size{150, 60},
+						MinSize:     Size{78, 26},
+						MaxSize:     Size{78, 26},
 						ToolTipText: "单击刷新验证码",
 						OnMouseUp: func(x, y int, button walk.MouseButton) {
 							i := GetImage(Conf.CDN[0])
@@ -496,14 +535,14 @@ func (mw *MyMainWindow) Submit() {
 		captchaEdit.SetFocus()
 		return
 	}
+	getPassengerDTO()
 	mw.Dispose()
-	createTicketWin()
+	// createTicketWin()
 
 }
 
 //获取联系人
 func getPassengerDTO() {
-	passenger := &PassengerDTO{}
 	for _, cdn := range Conf.CDN {
 		Info("开始获取联系人！")
 		body, err := DoForWardRequest(cdn, "POST", GetPassengerDTOURL, nil)
@@ -527,4 +566,13 @@ func getPassengerDTO() {
 		}
 	}
 	Info(passenger)
+
+	go func() {
+		model := []string{}
+		for _, v1 := range passenger.Data.NormalPassengers {
+			model = append(model, v1.PassengerName)
+			mapPassengers[v1.PassengerName] = v1
+		}
+		myPassengers.SetModel(model)
+	}()
 }
