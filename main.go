@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"image"
 	"log"
+	"math/rand"
 	"net/http"
 	"strings"
 	"time"
@@ -322,6 +323,7 @@ func createTicketWin() {
 								return
 							}
 							parseTicket()
+							ticket.queryLeftTicket(Conf.CDN[0])
 						},
 					},
 					LineErrorPresenter{
@@ -335,6 +337,53 @@ func createTicketWin() {
 	}
 
 }
+
+//查询余票
+func (t *TicketQueryInfo) queryLeftTicket(cdn string) *QueryLeftNewDTO {
+	fr := t.FromStations
+	to := t.ToStations
+	Info(fr)
+	Info(to)
+	Info(len(fr))
+	Info(rand.Intn(len(fr)))
+	return nil
+	leftTicketUrl := QueryLeftTicketURL
+
+	leftTicketUrl += "leftTicketDTO.train_date=" + t.TrainDate.Format("2006-01-02") + "&"
+	leftTicketUrl += "leftTicketDTO.from_station=" + StationMap[fr[rand.Intn(len(fr))]] + "&"
+	leftTicketUrl += "leftTicketDTO.to_station=" + StationMap[to[rand.Intn(len(to))]] + "&"
+	leftTicketUrl += "purpose_codes=ADULT"
+
+	Debug("queryLeftTicket url:", leftTicketUrl)
+
+	Info("开始获取联系人！")
+	body, err := DoForWardRequest(cdn, "POST", leftTicketUrl, nil)
+	if err != nil {
+		Error("queryLeftTicket DoForWardRequest error:", err)
+		return nil
+	}
+	Debug("queryLeftTicket body:", body)
+
+	if !strings.Contains(body, "queryLeftNewDTO") {
+		Error("查询余票出错，返回:", body, "查询链接:", leftTicketUrl)
+		//删除废弃的CDN
+		// if len(availableCDN) > 5 {
+		// delete(availableCDN, cdn)
+		// }
+		return nil
+	}
+	leftTicket := &QueryLeftNewDTO{}
+
+	if err := json.Unmarshal([]byte(body), &leftTicket); err != nil {
+		Error("queryLeftTicket", cdn, err)
+		return nil
+	} else {
+		Info(cdn, "获取成功！")
+	}
+
+	return leftTicket
+}
+
 func parseTicket() {
 	Info(ticket.TrainDate.Format("2006-01-02"))
 	Info(ticket)
