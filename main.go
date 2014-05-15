@@ -25,18 +25,18 @@ var (
 		P4: &PassengerOrder{},
 		P5: &PassengerOrder{},
 	}
-	passenger = &PassengerDTO{}
-)
+	passenger     = &PassengerDTO{}
+	ticketWin     = &MyMainWindow{}
+	loginWin      = &MyMainWindow{}
+	myPassengers  = &walk.ComboBox{}
+	mapPassengers = make(map[string]Passenger)
 
-var (
-	mw           = &MyMainWindow{}
 	loginButton  *walk.PushButton
 	captchaImage *walk.ImageView
 	captchaEdit  *walk.LineEdit
 	loginDB      *walk.DataBinder
 	loginEP      walk.ErrorPresenter
 
-	ticketWin          = &MyMainWindow{}
 	ticketDB           *walk.DataBinder
 	ticketEP           walk.ErrorPresenter
 	submitCaptchaImage *walk.ImageView
@@ -44,9 +44,8 @@ var (
 	password           *walk.LineEdit
 	submitCaptchaEdit  *walk.LineEdit
 	submitCaptchaEdit1 *walk.LineEdit
-	myPassengers       = &walk.ComboBox{}
-	mapPassengers      = make(map[string]Passenger)
 	passengers         *walk.Composite
+	date               *walk.DateEdit
 )
 
 type MyMainWindow struct {
@@ -83,6 +82,11 @@ func main() {
 }
 
 func createTicketWin() {
+	go getPassengerDTO()
+	go func() {
+		time.Sleep(time.Second * 2)
+		date.SetRange(time.Now(), time.Now().AddDate(0, 0, 19))
+	}()
 	if _, err := (MainWindow{
 		Name:     "ticketWindow",
 		AssignTo: &ticketWin.MainWindow,
@@ -97,16 +101,14 @@ func createTicketWin() {
 		Children: []Widget{
 			Composite{
 				Layout: Grid{Columns: 5},
-				// Layout: HBox{},
-				Name: "ticketPanel",
+				Name:   "ticketPanel",
 				Children: []Widget{
 					Label{
 						Text: "出发日期:",
 					},
 					DateEdit{
-						// MinDate: time.Now(),
-						// MaxDate: time.Now().AddDate(0, 0, 20),
-						Date: Bind("TrainDate", SelRequired{}),
+						AssignTo: &date,
+						Date:     Bind("TrainDate", SelRequired{}),
 					},
 					Label{
 						Text: "车　次:",
@@ -138,16 +140,11 @@ func createTicketWin() {
 						Text:        Bind("ToStationsStr", SelRequired{}),
 					},
 					ComboBox{
-						AssignTo:      &myPassengers,
-						BindingMember: "Value",
-						DisplayMember: "Name",
-						ToolTipText:   "选择联系人",
-						Model:         KnownSeatTypeName(),
-						OnCurrentIndexChanged: func() {
-							Info(myPassengers.Text())
-							Info(myPassengers)
-							Info(*myPassengers)
-						},
+						AssignTo:              &myPassengers,
+						BindingMember:         "Value",
+						DisplayMember:         "Name",
+						ToolTipText:           "选择联系人",
+						OnCurrentIndexChanged: choosePassengers,
 					},
 				},
 			},
@@ -285,7 +282,8 @@ func createTicketWin() {
 				},
 			},
 			Composite{
-				Layout: Grid{Columns: 5},
+				// Layout: Grid{Columns: 5},
+				Layout: HBox{},
 				Children: []Widget{
 					Label{
 						Text: "验证码:",
@@ -295,39 +293,25 @@ func createTicketWin() {
 						MaxLength: 4,
 						OnKeyUp: func(key walk.Key) {
 							if key == walk.KeyReturn && len(submitCaptchaEdit.Text()) == 4 {
-								// mw.Submit()
+								// loginWin.Submit()
 							}
 							// submitCaptchaEdit1.SetWidth(120)
 							// if len(captchaEdit.Text()) == 4 {
 							// 	Info("no enter")
-							// 	mw.Submit()
+							// 	loginWin.Submit()
 							// }
 						},
 					},
 					ImageView{
-						AssignTo: &captchaImage,
+						AssignTo: &submitCaptchaImage,
 						// Image:       Im,
 						MinSize:     Size{78, 26},
 						MaxSize:     Size{78, 26},
 						ToolTipText: "单击刷新验证码",
 						OnMouseUp: func(x, y int, button walk.MouseButton) {
-							// i := GetImage(Conf.CDN[0])
-							// Im, _ := walk.NewBitmapFromImage(i)
-							// captchaImage.SetImage(Im)
-
-							// Info(ticketWin.MainWindow.
-							s, ok := passengers.Children().At(1).(*walk.ComboBox)
-							Info(ok, s)
-							s.SetCurrentIndex(1)
-
-							s2, ok2 := passengers.Children().At(0).(*walk.LineEdit)
-							Info(ok2, s2)
-							s2.SetText("CX")
-							getPassengerDTO()
-							// Info(ticketWin.Children().At(2).(type))
-							// ticketWin.Children().At(1).(walk.Composite).Children().At(1).(walk.ComboBox).SetCurrentIndex(1)
-							// ticket.P1.SeatType = "1"
-							// ticket.P1.TicketType = "1"
+							i := GetImage(Conf.CDN[0])
+							Im, _ := walk.NewBitmapFromImage(i)
+							submitCaptchaImage.SetImage(Im)
 						},
 					},
 					PushButton{
@@ -337,8 +321,7 @@ func createTicketWin() {
 								Error("login faild! :", err)
 								return
 							}
-							Info(ticket)
-							Info(ticket.P1)
+							parseTicket()
 						},
 					},
 					LineErrorPresenter{
@@ -352,19 +335,104 @@ func createTicketWin() {
 	}
 
 }
+func parseTicket() {
+	Info(ticket.TrainDate.Format("2006-01-02"))
+	Info(ticket)
+	ticket.FromStations = parseStrings(ticket.FromStationsStr)
+	ticket.ToStations = parseStrings(ticket.ToStationsStr)
+	ticket.Trians = parseStrings(ticket.TriansStr)
 
+	Info(ticket)
+	o, n := parseStranger(*ticket)
+	ticket.OldPassengerStr = o
+	ticket.PassengerTicketStr = n[:len(n)-1]
+	Info(ticket)
+}
+func parseStranger(ticket TicketQueryInfo) (oStr, nStr string) {
+	if strings.Trim(ticket.P1.Name, " ") != "" {
+		pa := ticket.P1
+		nStr += pa.SeatType + ",0," + pa.TicketType + "," + pa.Name + "," + pa.PassengerIdTypeCode + "," + pa.PassengerIdNo + ",,N_"
+		oStr += pa.Name + "," + pa.PassengerIdTypeCode + "," + pa.PassengerIdNo + "," + pa.TicketType + "_"
+	}
+	if strings.Trim(ticket.P2.Name, " ") != "" {
+		pa := ticket.P2
+		nStr += pa.SeatType + ",0," + pa.TicketType + "," + pa.Name + "," + pa.PassengerIdTypeCode + "," + pa.PassengerIdNo + ",,N_"
+		oStr += pa.Name + "," + pa.PassengerIdTypeCode + "," + pa.PassengerIdNo + "," + pa.TicketType + "_"
+	}
+	if strings.Trim(ticket.P3.Name, " ") != "" {
+		pa := ticket.P3
+		nStr += pa.SeatType + ",0," + pa.TicketType + "," + pa.Name + "," + pa.PassengerIdTypeCode + "," + pa.PassengerIdNo + ",,N_"
+		oStr += pa.Name + "," + pa.PassengerIdTypeCode + "," + pa.PassengerIdNo + "," + pa.TicketType + "_"
+	}
+	if strings.Trim(ticket.P4.Name, " ") != "" {
+		pa := ticket.P4
+		nStr += pa.SeatType + ",0," + pa.TicketType + "," + pa.Name + "," + pa.PassengerIdTypeCode + "," + pa.PassengerIdNo + ",,N_"
+		oStr += pa.Name + "," + pa.PassengerIdTypeCode + "," + pa.PassengerIdNo + "," + pa.TicketType + "_"
+	}
+	if strings.Trim(ticket.P5.Name, " ") != "" {
+		pa := ticket.P5
+		nStr += pa.SeatType + ",0," + pa.TicketType + "," + pa.Name + "," + pa.PassengerIdTypeCode + "," + pa.PassengerIdNo + ",,N_"
+		oStr += pa.Name + "," + pa.PassengerIdTypeCode + "," + pa.PassengerIdNo + "," + pa.TicketType + "_"
+	}
+	return
+}
+func parseStrings(str string) (s []string) {
+	if strings.ContainsRune(str, rune('，')) {
+		for _, v := range strings.Split(str, "，") {
+			if v != "" {
+				s = append(s, v)
+			}
+		}
+	}
+	if strings.ContainsRune(str, rune(',')) {
+		for _, v := range strings.Split(str, ",") {
+			if v != "" {
+				s = append(s, v)
+			}
+		}
+	}
+	return
+}
+
+//选择联系人
+func choosePassengers() {
+	p := mapPassengers[myPassengers.Text()]
+	c := passengers.Children()
+	for i := 0; i < 5; i++ {
+		name, _ := c.At(i*5 + 0).(*walk.LineEdit)
+		// Info(name.Text())
+		if strings.Trim(name.Text(), " ") == "" {
+			name.SetText(p.PassengerName)
+
+			ticketType, _ := c.At(i*5 + 1).(*walk.ComboBox)
+			ticketType.SetCurrentIndex(0)
+
+			noType, _ := c.At(i*5 + 2).(*walk.ComboBox)
+			noType.SetCurrentIndex(0)
+
+			IDNO, _ := c.At(i*5 + 3).(*walk.LineEdit)
+			// Info(IDNO.Text())
+			IDNO.SetText(p.PassengerIdNo)
+
+			seatType, _ := c.At(i*5 + 4).(*walk.ComboBox)
+			seatType.SetCurrentIndex(6)
+			break
+		}
+	}
+}
 func createLoginWin() {
 	go func() {
 		i := GetImage(Conf.CDN[0])
 		Im, _ := walk.NewBitmapFromImage(i)
 		captchaImage.SetImage(Im)
+
 		username.SetText("xuhong157499")
 		password.SetText("xuhong1990")
 	}()
 
 	if _, err := (MainWindow{
 		Name:     "loginWindow",
-		AssignTo: &mw.MainWindow,
+		AssignTo: &loginWin.MainWindow,
 		Title:    "登陆",
 		MinSize:  Size{70, 70},
 		Layout:   VBox{},
@@ -409,11 +477,11 @@ func createLoginWin() {
 						Text:      Bind("Captcha"),
 						OnKeyUp: func(key walk.Key) {
 							if key == walk.KeyReturn && len(captchaEdit.Text()) == 4 {
-								mw.Submit()
+								loginWin.Submit()
 							}
 							// if len(captchaEdit.Text()) == 4 {
 							// 	Info("no enter")
-							// 	mw.Submit()
+							// 	loginWin.Submit()
 							// }
 						},
 					},
@@ -442,7 +510,7 @@ func createLoginWin() {
 					PushButton{
 						AssignTo:  &loginButton,
 						Text:      "登陆",
-						OnClicked: mw.Submit,
+						OnClicked: loginWin.Submit,
 					},
 				},
 			},
@@ -488,7 +556,7 @@ func GetImage(cdn string) image.Image {
 func GetCookieFromRespHeader(resp *http.Response) (cookie string) {
 	cookies := []string{}
 	for k, v := range resp.Header {
-		Info("k=", k, "v=", v)
+		Debug("k=", k, "v=", v)
 		if k == "Set-Cookie" {
 			for _, b := range v {
 				v := strings.Split(b, ";")[0]
@@ -506,7 +574,7 @@ func GetCookieFromRespHeader(resp *http.Response) (cookie string) {
 }
 
 //登录逻辑
-func (mw *MyMainWindow) Submit() {
+func (loginWin *MyMainWindow) Submit() {
 	if err := loginDB.Submit(); err != nil {
 		Error("login faild! :", err)
 		return
@@ -519,7 +587,7 @@ func (mw *MyMainWindow) Submit() {
 		}
 		captchaEdit.SetText("")
 		captchaEdit.SetFocus()
-		walk.MsgBox(mw, "提示", msg, walk.MsgBoxIconInformation)
+		walk.MsgBox(loginWin, "提示", msg, walk.MsgBoxIconInformation)
 		return
 	}
 	if r, m := login.Login(Conf.CDN[0]); !r {
@@ -527,7 +595,7 @@ func (mw *MyMainWindow) Submit() {
 		if len(m) > 0 {
 			msg = m[0]
 		}
-		walk.MsgBox(mw, "提示", msg, walk.MsgBoxIconInformation)
+		walk.MsgBox(loginWin, "提示", msg, walk.MsgBoxIconInformation)
 		img := GetImage(Conf.CDN[0])
 		Im, _ := walk.NewBitmapFromImage(img)
 		captchaImage.SetImage(Im)
@@ -535,10 +603,8 @@ func (mw *MyMainWindow) Submit() {
 		captchaEdit.SetFocus()
 		return
 	}
-	getPassengerDTO()
-	mw.Dispose()
-	// createTicketWin()
-
+	Info("登录成功！")
+	loginWin.Dispose()
 }
 
 //获取联系人
@@ -565,7 +631,7 @@ func getPassengerDTO() {
 			break
 		}
 	}
-	Info(passenger)
+	Debug(passenger)
 
 	go func() {
 		model := []string{}
