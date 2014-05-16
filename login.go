@@ -29,9 +29,9 @@ type LoginAysnSuggest struct {
 	ValidateMessages interface{} `json:"validateMessages,omitempty"`
 }
 
-func (l *Login) CheckRandCodeAnsyn(cdn string) (r bool, msg []string) {
+func CheckRandCodeAnsyn(randCode, cdn string) (r bool, msg []string) {
 	b := url.Values{}
-	b.Add("randCode", l.Captcha)
+	b.Add("randCode", randCode)
 	b.Add("rand", Rand)
 	params, err := url.QueryUnescape(b.Encode())
 	if err != nil {

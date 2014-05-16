@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"image"
+	"log"
 	"math/rand"
 	"net/http"
 	"net/url"
@@ -33,9 +34,63 @@ func main() {
 
 }
 
-/*
+//获取队列
+func (t *TicketQueryInfo) getQueueCount(v url.Values, dataResult []string, cdn string) {
+	//获取下验证码
+	//go getPassCodeNew(cdn)
+
+	params, _ := url.QueryUnescape(v.Encode())
+	Info("getQueueCount Params:", params)
+	go setSubmitImage()
+	body, err := DoForWardRequest(cdn, "POST", GetQueueCountURL, strings.NewReader(params))
+	if err != nil {
+		Error("getQueueCount DoForWardRequest error:", err)
+		return
+	}
+	Info("getQueueCount body:", body)
+	//确认队列
+	urlValuesForQueue := url.Values{}
+	urlValuesForQueue.Add("passengerTicketStr", t.PassengerTicketStr)
+	urlValuesForQueue.Add("oldPassengerStr", t.OldPassengerStr)
+	urlValuesForQueue.Add("randCode", <-ticket.SubmitCaptchaStr)
+	urlValuesForQueue.Add("purpose_codes", Purpose_codes)
+	urlValuesForQueue.Add("key_check_isChange", dataResult[1])
+	urlValuesForQueue.Add("leftTicketStr", dataResult[2])
+	urlValuesForQueue.Add("train_location", dataResult[0])
+	urlValuesForQueue.Add("_json_att", Json_att)
+	Info(urlValuesForQueue)
+	t.confirmSingleForQueue(urlValuesForQueue, cdn)
+}
+
+//再次确认队列？
+func (t *TicketQueryInfo) confirmSingleForQueue(v url.Values, cdn string) {
+	//getPassCodeNew(cdn)
+	Info("confirmSingleForQueue Params:", v.Encode())
+	body, err := DoForWardRequest(cdn, "POST", ConfirmSingleURL, strings.NewReader(v.Encode()))
+	if err != nil {
+		Error("confirmSingleForQueue DoForWardRequest error:", err)
+		return
+	}
+	Debug("confirmSingleForQueue body:", body)
+	Info("confirmSingleForQueue body:", body)
+	if strings.Contains(body, `"submitStatus":true`) {
+		Info("提交订单成功 body:", body)
+	} else if strings.Contains(body, `订单未支付`) {
+		log.Println("订票成功！！")
+	} else if strings.Contains(body, `用户未登录`) {
+		log.Println("用户未登录！！")
+	} else if strings.Contains(body, `取消次数过多`) {
+		log.Println("由于您取消次数过多！！")
+	} else if strings.Contains(body, `互联网售票实行实名制`) {
+		log.Println("貌似你已经购买了相同的车票！！")
+	} else {
+		Warn(cdn, "订票请求警告:", body)
+	}
+
+}
+
 //提交订单
-func submitOrderRequest(urlValues url.Values, cdn string, t Ticket) error {
+func (tic *TicketQueryInfo) submitOrderRequest(urlValues url.Values, cdn string, t Ticket) error {
 	// defer func() {
 	// 	<-submitChannel
 	// }()
@@ -64,7 +119,8 @@ func submitOrderRequest(urlValues url.Values, cdn string, t Ticket) error {
 			Info("key_check_isChange:", dataResult[1], "leftTicket:", dataResult[2])
 			//获取队列
 			urlValues := url.Values{}
-			urlValues.Add("train_date", time.Now().String())
+			urlValues.Add("train_date", `Tue+May+20+2014+21%3A53%3A37+GMT%2B0800+(China+Standard+Time)`)
+			// urlValues.Add("train_date", time.Now().String())
 			urlValues.Add("train_no", t.TrainNo)
 			urlValues.Add("stationTrainCode", t.StationTrainCode)
 			urlValues.Add("seatType", "3")
@@ -73,29 +129,8 @@ func submitOrderRequest(urlValues url.Values, cdn string, t Ticket) error {
 			urlValues.Add("leftTicket", dataResult[2])
 			urlValues.Add("purpose_codes", Purpose_codes)
 			urlValues.Add("_json_att", Json_att)
-
-			getQueueCount(urlValues, dataResult, cdn)
-
-			//是否同时进行提交表单
-			if Config.System.GoBoth {
-				//确认队列
-				urlValuesForQueue := url.Values{}
-				urlValuesForQueue.Add("passengerTicketStr", passengerTicketStr)
-				urlValuesForQueue.Add("oldPassengerStr", oldPassengerStr)
-				urlValuesForQueue.Add("randCode", dataResult[1])
-				urlValuesForQueue.Add("purpose_codes", Purpose_codes)
-				urlValuesForQueue.Add("key_check_isChange", dataResult[1])
-				urlValuesForQueue.Add("leftTicketStr", dataResult[2])
-				urlValuesForQueue.Add("train_location", dataResult[0])
-				urlValuesForQueue.Add("_json_att", Json_att)
-
-				// 需要延迟提交，提早好像要被踢！！！
-				if Config.System.SubmitTime > 1000 {
-					time.Sleep(time.Millisecond * time.Duration(Config.System.SubmitTime))
-				}
-
-				confirmSingleForQueue(urlValuesForQueue, cdn)
-			}
+			Info(urlValues)
+			go tic.getQueueCount(urlValues, dataResult, cdn)
 
 		}
 	} else if strings.Contains(body, `您还有未处理的订单`) {
@@ -114,7 +149,7 @@ func submitOrderRequest(urlValues url.Values, cdn string, t Ticket) error {
 		Warn(cdn, "订票请求警告:", body)
 	}
 	return nil
-}*/
+}
 
 //查询
 func (t *TicketQueryInfo) Order(cdn string) {
@@ -135,11 +170,10 @@ func (t *TicketQueryInfo) Order(cdn string) {
 			for _, data := range tickets.Data { //每个车次
 				//查询到的车次
 				tkt := data.Ticket
-				if tkt.StationTrainCode == trainCode { //是预订的车次
+				if tkt.StationTrainCode == strings.ToUpper(trainCode) { //是预订的车次
 					//获取余票信息
 					ticketNum := GetTicketNum(tkt.YpInfo, tkt.YpEx)
-					numOfTicket := ticketNum["硬卧"]       //通过配置的seattype获取余票信息
-					if numOfTicket >= t.NumOfPassenger { //想要预订席别的余票大于等于订票人的人数
+					if validateNum(ticketNum, t.NumOfSeatType) { //想要预订席别的余票大于等于订票人的人数
 						Info(cdn, "开始订票", t.TrainDate.Format("2006-01-02"), "车次", tkt.StationTrainCode, "余票", fmt.Sprintf("%v", ticketNum))
 						urlValues := url.Values{}
 						urlValues.Add("bed_level_order_num", Bed_level_order_num)
@@ -152,11 +186,11 @@ func (t *TicketQueryInfo) Order(cdn string) {
 						urlValues.Add("query_to_station_name", tkt.ToStationName)
 						urlValues.Add("passengerTicketStr", t.PassengerTicketStr)
 						urlValues.Add("oldPassengerStr", t.OldPassengerStr)
+						Info(urlValues)
+						go t.submitOrderRequest(urlValues, cdn, tkt)
 
-						// go submitOrderRequest(urlValues, cdn, tkt)
-
-					} else if numOfTicket > 0 && numOfTicket < t.NumOfPassenger {
-						Info("车次", tkt.StationTrainCode, "余票不足！！！", fmt.Sprintf("%v", ticketNum))
+					} else {
+						Info("车次", tkt.StationTrainCode, "余票不足！！！剩余票：", fmt.Sprintf("%v", ticketNum), "订购的票:", fmt.Sprintf("%v", t.NumOfSeatType))
 					}
 				} else { //不是预订的车次
 					//Debug(tkt.StationTrainCode, "余票", fmt.Sprintf("%v", getTicketNum(tkt.YpInfo, tkt.YpEx)))
@@ -166,6 +200,17 @@ func (t *TicketQueryInfo) Order(cdn string) {
 	} else {
 		Error(cdn, "余票查询错误", tickets)
 	}
+}
+func validateNum(ticketNum, seatTypeNum map[string]int) (b bool) {
+	b = true
+	for k, v := range seatTypeNum {
+		Info(k, v, ticketNum[k])
+		if ticketNum[k] < v {
+			b = false
+			break
+		}
+	}
+	return
 }
 
 //查询余票
@@ -224,23 +269,27 @@ func parseTicket() {
 	// ticket.queryLeftTicket(Conf.CDN[0])
 	ticket.Order(Conf.CDN[0])
 }
-func plusNum(num int, oStr, nStr string, p *PassengerOrder) (int, string, string) {
+func plusNum(num int, oStr, nStr string, p *PassengerOrder, m map[string]int) (int, string, string, map[string]int) {
 	if strings.Trim(p.Name, " ") != "" {
+		name := SeatTypeValueToN[p.SeatType]
+		m[name] = m[name] + 1
 		nStr += p.SeatType + ",0," + p.TicketType + "," + p.Name + "," + p.PassengerIdTypeCode + "," + p.PassengerIdNo + ",,N_"
 		oStr += p.Name + "," + p.PassengerIdTypeCode + "," + p.PassengerIdNo + "," + p.TicketType + "_"
-		return num + 1, nStr, oStr
+		return num + 1, oStr, nStr, m
 	}
-	return num, nStr, oStr
+	return num, oStr, nStr, m
 }
 func parseStranger(ticket *TicketQueryInfo) (oStr, nStr string) {
 	num := 0
-	num, oStr, nStr = plusNum(num, oStr, nStr, ticket.P1)
-	num, oStr, nStr = plusNum(num, oStr, nStr, ticket.P2)
-	num, oStr, nStr = plusNum(num, oStr, nStr, ticket.P3)
-	num, oStr, nStr = plusNum(num, oStr, nStr, ticket.P4)
-	num, oStr, nStr = plusNum(num, oStr, nStr, ticket.P5)
+	m := make(map[string]int)
+	num, oStr, nStr, m = plusNum(num, oStr, nStr, ticket.P1, m)
+	num, oStr, nStr, m = plusNum(num, oStr, nStr, ticket.P2, m)
+	num, oStr, nStr, m = plusNum(num, oStr, nStr, ticket.P3, m)
+	num, oStr, nStr, m = plusNum(num, oStr, nStr, ticket.P4, m)
+	num, oStr, nStr, m = plusNum(num, oStr, nStr, ticket.P5, m)
 
 	ticket.NumOfPassenger = num
+	ticket.NumOfSeatType = m
 	return
 }
 func parseStrings(str string) (s []string) {
@@ -265,7 +314,7 @@ func parseStrings(str string) (s []string) {
 }
 
 //获取新的验证码图片
-func GetImage(cdn string) image.Image {
+func GetImage(cdn string, setCookie bool) image.Image {
 	req, err := http.NewRequest("GET", PassCodeNewURL, nil)
 	if err != nil {
 		Error("GetImage http.NewRequest error:", err)
@@ -284,7 +333,9 @@ func GetImage(cdn string) image.Image {
 	}
 	defer resp.Body.Close()
 	//set cookie
-	login.Cookie = GetCookieFromRespHeader(resp)
+	if setCookie {
+		login.Cookie = GetCookieFromRespHeader(resp)
+	}
 	Debug("==" + login.Cookie + "==")
 
 	img, s, err := image.Decode(resp.Body)

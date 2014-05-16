@@ -39,6 +39,14 @@ type MyMainWindow struct {
 	*walk.MainWindow
 }
 
+func setSubmitImage() {
+	i := GetImage(Conf.CDN[0], false)
+	Im, _ := walk.NewBitmapFromImage(i)
+	submitCaptchaImage.SetImage(Im)
+	submitCaptchaEdit.SetText("")
+	submitCaptchaEdit.SetFocus()
+	ticket.SubmitCaptchaStr = make(chan string)
+}
 func createUI() {
 	app := walk.App()
 
@@ -279,14 +287,24 @@ func createTicketWin() {
 						AssignTo:  &submitCaptchaEdit,
 						MaxLength: 4,
 						OnKeyUp: func(key walk.Key) {
-							if key == walk.KeyReturn && len(submitCaptchaEdit.Text()) == 4 {
-								// loginWin.Submit()
+							if len(submitCaptchaEdit.Text()) == 4 {
+								if r, m := CheckRandCodeAnsyn(submitCaptchaEdit.Text(), Conf.CDN[0]); !r {
+									msg := "验证码不正确！"
+									Info(msg)
+									if len(m) > 0 {
+										msg = m[0]
+									}
+									submitCaptchaEdit.SetText("")
+									submitCaptchaEdit.SetFocus()
+									walk.MsgBox(ticketWin, "提示", msg, walk.MsgBoxIconInformation)
+									return
+								}
+								Info("success!")
+								ticket.SubmitCaptchaStr <- submitCaptchaEdit.Text()
 							}
-							// submitCaptchaEdit1.SetWidth(120)
-							// if len(captchaEdit.Text()) == 4 {
-							// 	Info("no enter")
-							// 	loginWin.Submit()
-							// }
+							if key == walk.KeyReturn && len(submitCaptchaEdit.Text()) == 4 {
+							}
+
 						},
 					},
 					ImageView{
@@ -296,7 +314,7 @@ func createTicketWin() {
 						MaxSize:     Size{78, 26},
 						ToolTipText: "单击刷新验证码",
 						OnMouseUp: func(x, y int, button walk.MouseButton) {
-							i := GetImage(Conf.CDN[0])
+							i := GetImage(Conf.CDN[0], false)
 							Im, _ := walk.NewBitmapFromImage(i)
 							submitCaptchaImage.SetImage(Im)
 						},
@@ -325,7 +343,7 @@ func createTicketWin() {
 
 func createLoginWin() {
 	go func() {
-		i := GetImage(Conf.CDN[0])
+		i := GetImage(Conf.CDN[0], true)
 		Im, _ := walk.NewBitmapFromImage(i)
 		captchaImage.SetImage(Im)
 
@@ -401,7 +419,7 @@ func createLoginWin() {
 						MaxSize:     Size{78, 26},
 						ToolTipText: "单击刷新验证码",
 						OnMouseUp: func(x, y int, button walk.MouseButton) {
-							i := GetImage(Conf.CDN[0])
+							i := GetImage(Conf.CDN[0], true)
 							Im, _ := walk.NewBitmapFromImage(i)
 							captchaImage.SetImage(Im)
 						},
@@ -457,7 +475,7 @@ func (loginWin *MyMainWindow) Submit() {
 		return
 	}
 	Info(login)
-	if r, m := login.CheckRandCodeAnsyn(Conf.CDN[0]); !r {
+	if r, m := CheckRandCodeAnsyn(captchaEdit.Text(), Conf.CDN[0]); !r {
 		msg := "验证码不正确！"
 		if len(m) > 0 {
 			msg = m[0]
@@ -473,7 +491,7 @@ func (loginWin *MyMainWindow) Submit() {
 			msg = m[0]
 		}
 		walk.MsgBox(loginWin, "提示", msg, walk.MsgBoxIconInformation)
-		img := GetImage(Conf.CDN[0])
+		img := GetImage(Conf.CDN[0], true)
 		Im, _ := walk.NewBitmapFromImage(img)
 		captchaImage.SetImage(Im)
 		captchaEdit.SetText("")
