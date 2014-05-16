@@ -15,12 +15,12 @@ import (
 
 //转发
 func DoForWardRequest(cdn, method, requestUrl string, body io.Reader) (string, error) {
-	req, err := http.NewRequest("POST", requestUrl, body)
+	req, err := http.NewRequest(method, requestUrl, body)
 	if err != nil {
 		Error("DoForWardRequest http.NewRequest error:", err)
 		return "", err
 	}
-	AddReqestHeader(req, "POST")
+	AddReqestHeader(req, method)
 
 	con, err := NewForwardClientConn(cdn, req.URL.Scheme)
 	if err != nil {

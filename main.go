@@ -2,19 +2,16 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"image"
-	"log"
 	"math/rand"
 	"net/http"
+	"net/url"
 	"strings"
-	"time"
 
 	_ "image/gif"
 	_ "image/jpeg"
 	_ "image/png"
-
-	"github.com/lxn/walk"
-	. "github.com/lxn/walk/declarative"
 )
 
 var (
@@ -27,337 +24,164 @@ var (
 		P5: &PassengerOrder{},
 	}
 	passenger     = &PassengerDTO{}
-	ticketWin     = &MyMainWindow{}
-	loginWin      = &MyMainWindow{}
-	myPassengers  = &walk.ComboBox{}
 	mapPassengers = make(map[string]Passenger)
-
-	loginButton  *walk.PushButton
-	captchaImage *walk.ImageView
-	captchaEdit  *walk.LineEdit
-	loginDB      *walk.DataBinder
-	loginEP      walk.ErrorPresenter
-
-	ticketDB           *walk.DataBinder
-	ticketEP           walk.ErrorPresenter
-	submitCaptchaImage *walk.ImageView
-	username           *walk.LineEdit
-	password           *walk.LineEdit
-	submitCaptchaEdit  *walk.LineEdit
-	submitCaptchaEdit1 *walk.LineEdit
-	passengers         *walk.Composite
-	date               *walk.DateEdit
 )
 
-type MyMainWindow struct {
-	*walk.MainWindow
-}
-
 func main() {
-	app := walk.App()
 
-	// These specify the app data sub directory for the settings file.
-	app.SetOrganizationName("The Walk Authors")
-	app.SetProductName("Walk Settings Example")
-
-	// Settings file name.
-	settings := walk.NewIniFileSettings("settings.ini")
-
-	// All settings marked as expiring will expire after this duration w/o use.
-	// This applies to all widgets settings.
-	settings.SetExpireDuration(time.Hour * 24 * 30 * 3)
-
-	if err := settings.Load(); err != nil {
-		log.Fatal(err)
-	}
-
-	app.SetSettings(settings)
-
-	createLoginWin()
-	createTicketWin()
-
-	if err := settings.Save(); err != nil {
-		log.Fatal(err)
-	}
+	createUI()
 
 }
 
-func createTicketWin() {
-	go getPassengerDTO()
-	go func() {
-		time.Sleep(time.Second * 2)
-		date.SetRange(time.Now(), time.Now().AddDate(0, 0, 19))
-	}()
-	if _, err := (MainWindow{
-		Name:     "ticketWindow",
-		AssignTo: &ticketWin.MainWindow,
-		Title:    "订票查询 -  by Charles",
-		MinSize:  Size{300, 200},
-		Layout:   VBox{},
-		DataBinder: DataBinder{
-			AssignTo:       &ticketDB,
-			DataSource:     ticket,
-			ErrorPresenter: ErrorPresenterRef{&ticketEP},
-		},
-		Children: []Widget{
-			Composite{
-				Layout: Grid{Columns: 5},
-				Name:   "ticketPanel",
-				Children: []Widget{
-					Label{
-						Text: "出发日期:",
-					},
-					DateEdit{
-						AssignTo: &date,
-						Date:     Bind("TrainDate", SelRequired{}),
-					},
-					Label{
-						Text: "车　次:",
-					},
-					LineEdit{
-						ToolTipText: "多个车次请以逗号分隔",
-						MaxLength:   32,
-						Text:        Bind("TriansStr", SelRequired{}),
-					},
-					VSpacer{
-						Size: 8,
-					},
+/*
+//提交订单
+func submitOrderRequest(urlValues url.Values, cdn string, t Ticket) error {
+	// defer func() {
+	// 	<-submitChannel
+	// }()
+	// submitChannel <- 1
 
-					Label{
-						Text: "出发地:",
-					},
-					LineEdit{
-						ToolTipText: "多个出发地请以逗号分隔",
-						MaxLength:   32,
-						Text:        Bind("FromStationsStr", SelRequired{}),
-					},
+	params, _ := url.QueryUnescape(urlValues.Encode())
+	Debug(params)
 
-					Label{
-						Text: "目的地:",
-					},
-					LineEdit{
-						MaxLength:   32,
-						ToolTipText: "多个目的地请以逗号分隔",
-						Text:        Bind("ToStationsStr", SelRequired{}),
-					},
-					ComboBox{
-						AssignTo:              &myPassengers,
-						BindingMember:         "Value",
-						DisplayMember:         "Name",
-						ToolTipText:           "选择联系人",
-						OnCurrentIndexChanged: choosePassengers,
-					},
-				},
-			},
-			Composite{
-				AssignTo: &passengers,
-				Layout:   Grid{Columns: 5},
-				Children: []Widget{
-					LineEdit{
-						Text: Bind("P1.Name"),
-					},
-					ComboBox{
-						CurrentIndex:  0,
-						Value:         Bind("P1.TicketType"),
-						BindingMember: "Id",
-						DisplayMember: "Name",
-						Model:         KnownTicketTypeName(),
-					},
-					ComboBox{
-						CurrentIndex:  0,
-						Value:         Bind("P1.PassengerIdTypeCode"),
-						BindingMember: "Id",
-						DisplayMember: "Name",
-						Model:         KnownIDTypeName(),
-					},
-					LineEdit{
-						MinSize: Size{140, 12},
-						Text:    Bind("P1.PassengerIdNo"),
-					},
-					ComboBox{
-						Value:         Bind("P1.SeatType"),
-						BindingMember: "Value",
-						DisplayMember: "Name",
-						Model:         KnownSeatTypeName(),
-					},
-
-					LineEdit{
-						Text: Bind("P2.Name"),
-					},
-					ComboBox{
-						Value:         Bind("P2.TicketType"),
-						BindingMember: "Id",
-						DisplayMember: "Name",
-						Model:         KnownTicketTypeName(),
-					},
-					ComboBox{
-						Value:         Bind("P2.PassengerIdTypeCode"),
-						BindingMember: "Id",
-						DisplayMember: "Name",
-						Model:         KnownIDTypeName(),
-					},
-					LineEdit{
-						Text: Bind("P2.PassengerIdNo"),
-					},
-					ComboBox{
-						Value:         Bind("P2.SeatType"),
-						BindingMember: "Value",
-						DisplayMember: "Name",
-						Model:         KnownSeatTypeName(),
-					},
-
-					LineEdit{
-						Text: Bind("P3.Name"),
-					},
-					ComboBox{
-						Value:         Bind("P3.TicketType"),
-						BindingMember: "Id",
-						DisplayMember: "Name",
-						Model:         KnownTicketTypeName(),
-					},
-					ComboBox{
-						Value:         Bind("P3.PassengerIdTypeCode"),
-						BindingMember: "Id",
-						DisplayMember: "Name",
-						Model:         KnownIDTypeName(),
-					},
-					LineEdit{
-						Text: Bind("P3.PassengerIdNo"),
-					},
-					ComboBox{
-						Value:         Bind("P3.SeatType"),
-						BindingMember: "Value",
-						DisplayMember: "Name",
-						Model:         KnownSeatTypeName(),
-					},
-
-					LineEdit{
-						Text: Bind("P4.Name"),
-					},
-					ComboBox{
-						Value:         Bind("P4.TicketType"),
-						BindingMember: "Id",
-						DisplayMember: "Name",
-						Model:         KnownTicketTypeName(),
-					},
-					ComboBox{
-						Value:         Bind("P4.PassengerIdTypeCode"),
-						BindingMember: "Id",
-						DisplayMember: "Name",
-						Model:         KnownIDTypeName(),
-					},
-					LineEdit{
-						Text: Bind("P4.PassengerIdNo"),
-					},
-					ComboBox{
-						Value:         Bind("P4.SeatType"),
-						BindingMember: "Value",
-						DisplayMember: "Name",
-						Model:         KnownSeatTypeName(),
-					},
-
-					LineEdit{
-						Text: Bind("P5.Name"),
-					},
-					ComboBox{
-						Value:         Bind("P5.TicketType"),
-						BindingMember: "Id",
-						DisplayMember: "Name",
-						Model:         KnownTicketTypeName(),
-					},
-					ComboBox{
-						Value:         Bind("P5.PassengerIdTypeCode"),
-						BindingMember: "Id",
-						DisplayMember: "Name",
-						Model:         KnownIDTypeName(),
-					},
-					LineEdit{
-						Text: Bind("P5.PassengerIdNo"),
-					},
-					ComboBox{
-						Value:         Bind("P5.SeatType"),
-						BindingMember: "Value",
-						DisplayMember: "Name",
-						Model:         KnownSeatTypeName(),
-					},
-				},
-			},
-			Composite{
-				// Layout: Grid{Columns: 5},
-				Layout: HBox{},
-				Children: []Widget{
-					Label{
-						Text: "验证码:",
-					},
-					LineEdit{
-						AssignTo:  &submitCaptchaEdit,
-						MaxLength: 4,
-						OnKeyUp: func(key walk.Key) {
-							if key == walk.KeyReturn && len(submitCaptchaEdit.Text()) == 4 {
-								// loginWin.Submit()
-							}
-							// submitCaptchaEdit1.SetWidth(120)
-							// if len(captchaEdit.Text()) == 4 {
-							// 	Info("no enter")
-							// 	loginWin.Submit()
-							// }
-						},
-					},
-					ImageView{
-						AssignTo: &submitCaptchaImage,
-						// Image:       Im,
-						MinSize:     Size{78, 26},
-						MaxSize:     Size{78, 26},
-						ToolTipText: "单击刷新验证码",
-						OnMouseUp: func(x, y int, button walk.MouseButton) {
-							i := GetImage(Conf.CDN[0])
-							Im, _ := walk.NewBitmapFromImage(i)
-							submitCaptchaImage.SetImage(Im)
-						},
-					},
-					PushButton{
-						Text: "查询",
-						OnClicked: func() {
-							if err := ticketDB.Submit(); err != nil {
-								Error("login faild! :", err)
-								return
-							}
-							parseTicket()
-							ticket.queryLeftTicket(Conf.CDN[0])
-						},
-					},
-					LineErrorPresenter{
-						AssignTo: &ticketEP,
-					},
-				},
-			},
-		},
-	}.Run()); err != nil {
-		log.Fatal(err)
+	body, err := DoForWardRequest(cdn, "POST", SubmitOrderRequestURL, strings.NewReader(params))
+	if err != nil {
+		Error("submitOrderRequest DoForWardRequest error:", err)
+		return err
 	}
+	Debug("submitOrderRequest body:", body)
 
+	if strings.Contains(body, `"submitStatus":true`) {
+		orderResoult := &OrderResoult{}
+		if err := json.Unmarshal([]byte(body), &orderResoult); err != nil {
+			Error("submitOrderRequest", err)
+			return err
+		} else {
+			dataResult := strings.Split(orderResoult.Data.Result, "#")
+			//key_check_isChange=99F79C00DFB9BF8713D23EFA4A8CF06BCA8C412DAC19686DCE306476
+			// leftTicketStr = 1002353600401115003110023507803007450039
+			// for getQueueCount
+			Info("key_check_isChange:", dataResult[1], "leftTicket:", dataResult[2])
+			//获取队列
+			urlValues := url.Values{}
+			urlValues.Add("train_date", time.Now().String())
+			urlValues.Add("train_no", t.TrainNo)
+			urlValues.Add("stationTrainCode", t.StationTrainCode)
+			urlValues.Add("seatType", "3")
+			urlValues.Add("fromStationTelecode", t.FromStationTelecode)
+			urlValues.Add("toStationTelecode", t.ToStationTelecode)
+			urlValues.Add("leftTicket", dataResult[2])
+			urlValues.Add("purpose_codes", Purpose_codes)
+			urlValues.Add("_json_att", Json_att)
+
+			getQueueCount(urlValues, dataResult, cdn)
+
+			//是否同时进行提交表单
+			if Config.System.GoBoth {
+				//确认队列
+				urlValuesForQueue := url.Values{}
+				urlValuesForQueue.Add("passengerTicketStr", passengerTicketStr)
+				urlValuesForQueue.Add("oldPassengerStr", oldPassengerStr)
+				urlValuesForQueue.Add("randCode", dataResult[1])
+				urlValuesForQueue.Add("purpose_codes", Purpose_codes)
+				urlValuesForQueue.Add("key_check_isChange", dataResult[1])
+				urlValuesForQueue.Add("leftTicketStr", dataResult[2])
+				urlValuesForQueue.Add("train_location", dataResult[0])
+				urlValuesForQueue.Add("_json_att", Json_att)
+
+				// 需要延迟提交，提早好像要被踢！！！
+				if Config.System.SubmitTime > 1000 {
+					time.Sleep(time.Millisecond * time.Duration(Config.System.SubmitTime))
+				}
+
+				confirmSingleForQueue(urlValuesForQueue, cdn)
+			}
+
+		}
+	} else if strings.Contains(body, `您还有未处理的订单`) {
+		log.Println("订票成功！！")
+		// sendMessage("订票成功！！")
+	} else if strings.Contains(body, `用户未登录`) {
+		log.Println("用户未登录！！")
+		// sendMessage("用户未登录！！")
+	} else if strings.Contains(body, `取消次数过多`) {
+		log.Println("由于您取消次数过多！！")
+		// sendMessage("由于您取消次数过多！！")
+	} else if strings.Contains(body, `互联网售票实行实名制`) {
+		log.Println("貌似你已经购买了相同的车票！！")
+		// sendMessage("貌似你已经购买了相同的车票！！")
+	} else {
+		Warn(cdn, "订票请求警告:", body)
+	}
+	return nil
+}*/
+
+//查询
+func (t *TicketQueryInfo) Order(cdn string) {
+	//睡眠下，随机
+	//time.Sleep(time.Millisecond * time.Duration(Config.System.SubmitTime))
+	//time.Sleep(time.Millisecond * time.Duration(rand.Int63n(Config.System.RefreshTime)))
+
+	// defer func() {
+	// <-queryChannel
+	// }()
+	// queryChannel <- 1
+
+	// queryJs(cdn)
+
+	if tickets := t.queryLeftTicket(cdn); tickets != nil { //获取车次
+		for _, trainCode := range t.Trians { //要预订的车次
+			trainCode = strings.ToUpper(trainCode)
+			for _, data := range tickets.Data { //每个车次
+				//查询到的车次
+				tkt := data.Ticket
+				if tkt.StationTrainCode == trainCode { //是预订的车次
+					//获取余票信息
+					ticketNum := GetTicketNum(tkt.YpInfo, tkt.YpEx)
+					numOfTicket := ticketNum["硬卧"]       //通过配置的seattype获取余票信息
+					if numOfTicket >= t.NumOfPassenger { //想要预订席别的余票大于等于订票人的人数
+						Info(cdn, "开始订票", t.TrainDate.Format("2006-01-02"), "车次", tkt.StationTrainCode, "余票", fmt.Sprintf("%v", ticketNum))
+						urlValues := url.Values{}
+						urlValues.Add("bed_level_order_num", Bed_level_order_num)
+						urlValues.Add("cancel_flag", Cancel_flag)
+						urlValues.Add("purpose_codes", Purpose_codes)
+						urlValues.Add("tour_flag", Tour_flag)
+						urlValues.Add("secretStr", data.SecretStr)
+						urlValues.Add("train_date", t.TrainDate.Format("2006-01-02"))
+						urlValues.Add("query_from_station_name", tkt.FromStationName)
+						urlValues.Add("query_to_station_name", tkt.ToStationName)
+						urlValues.Add("passengerTicketStr", t.PassengerTicketStr)
+						urlValues.Add("oldPassengerStr", t.OldPassengerStr)
+
+						// go submitOrderRequest(urlValues, cdn, tkt)
+
+					} else if numOfTicket > 0 && numOfTicket < t.NumOfPassenger {
+						Info("车次", tkt.StationTrainCode, "余票不足！！！", fmt.Sprintf("%v", ticketNum))
+					}
+				} else { //不是预订的车次
+					//Debug(tkt.StationTrainCode, "余票", fmt.Sprintf("%v", getTicketNum(tkt.YpInfo, tkt.YpEx)))
+				}
+			}
+		}
+	} else {
+		Error(cdn, "余票查询错误", tickets)
+	}
 }
 
 //查询余票
 func (t *TicketQueryInfo) queryLeftTicket(cdn string) *QueryLeftNewDTO {
 	fr := t.FromStations
 	to := t.ToStations
-	Info(fr)
-	Info(to)
-	Info(len(fr))
-	Info(rand.Intn(len(fr)))
-	return nil
-	leftTicketUrl := QueryLeftTicketURL
-
+	leftTicketUrl := ""
 	leftTicketUrl += "leftTicketDTO.train_date=" + t.TrainDate.Format("2006-01-02") + "&"
 	leftTicketUrl += "leftTicketDTO.from_station=" + StationMap[fr[rand.Intn(len(fr))]] + "&"
 	leftTicketUrl += "leftTicketDTO.to_station=" + StationMap[to[rand.Intn(len(to))]] + "&"
 	leftTicketUrl += "purpose_codes=ADULT"
 
-	Debug("queryLeftTicket url:", leftTicketUrl)
+	Info("queryLeftTicket url:", leftTicketUrl)
 
-	Info("开始获取联系人！")
-	body, err := DoForWardRequest(cdn, "POST", leftTicketUrl, nil)
+	go DoForWardRequest(cdn, "GET", LogQueryLeftTicketURL+leftTicketUrl, nil)
+	body, err := DoForWardRequest(cdn, "GET", QueryLeftTicketURL+leftTicketUrl, nil)
 	if err != nil {
 		Error("queryLeftTicket DoForWardRequest error:", err)
 		return nil
@@ -392,37 +216,31 @@ func parseTicket() {
 	ticket.Trians = parseStrings(ticket.TriansStr)
 
 	Info(ticket)
-	o, n := parseStranger(*ticket)
+	o, n := parseStranger(ticket)
 	ticket.OldPassengerStr = o
 	ticket.PassengerTicketStr = n[:len(n)-1]
 	Info(ticket)
+
+	// ticket.queryLeftTicket(Conf.CDN[0])
+	ticket.Order(Conf.CDN[0])
 }
-func parseStranger(ticket TicketQueryInfo) (oStr, nStr string) {
-	if strings.Trim(ticket.P1.Name, " ") != "" {
-		pa := ticket.P1
-		nStr += pa.SeatType + ",0," + pa.TicketType + "," + pa.Name + "," + pa.PassengerIdTypeCode + "," + pa.PassengerIdNo + ",,N_"
-		oStr += pa.Name + "," + pa.PassengerIdTypeCode + "," + pa.PassengerIdNo + "," + pa.TicketType + "_"
+func plusNum(num int, oStr, nStr string, p *PassengerOrder) (int, string, string) {
+	if strings.Trim(p.Name, " ") != "" {
+		nStr += p.SeatType + ",0," + p.TicketType + "," + p.Name + "," + p.PassengerIdTypeCode + "," + p.PassengerIdNo + ",,N_"
+		oStr += p.Name + "," + p.PassengerIdTypeCode + "," + p.PassengerIdNo + "," + p.TicketType + "_"
+		return num + 1, nStr, oStr
 	}
-	if strings.Trim(ticket.P2.Name, " ") != "" {
-		pa := ticket.P2
-		nStr += pa.SeatType + ",0," + pa.TicketType + "," + pa.Name + "," + pa.PassengerIdTypeCode + "," + pa.PassengerIdNo + ",,N_"
-		oStr += pa.Name + "," + pa.PassengerIdTypeCode + "," + pa.PassengerIdNo + "," + pa.TicketType + "_"
-	}
-	if strings.Trim(ticket.P3.Name, " ") != "" {
-		pa := ticket.P3
-		nStr += pa.SeatType + ",0," + pa.TicketType + "," + pa.Name + "," + pa.PassengerIdTypeCode + "," + pa.PassengerIdNo + ",,N_"
-		oStr += pa.Name + "," + pa.PassengerIdTypeCode + "," + pa.PassengerIdNo + "," + pa.TicketType + "_"
-	}
-	if strings.Trim(ticket.P4.Name, " ") != "" {
-		pa := ticket.P4
-		nStr += pa.SeatType + ",0," + pa.TicketType + "," + pa.Name + "," + pa.PassengerIdTypeCode + "," + pa.PassengerIdNo + ",,N_"
-		oStr += pa.Name + "," + pa.PassengerIdTypeCode + "," + pa.PassengerIdNo + "," + pa.TicketType + "_"
-	}
-	if strings.Trim(ticket.P5.Name, " ") != "" {
-		pa := ticket.P5
-		nStr += pa.SeatType + ",0," + pa.TicketType + "," + pa.Name + "," + pa.PassengerIdTypeCode + "," + pa.PassengerIdNo + ",,N_"
-		oStr += pa.Name + "," + pa.PassengerIdTypeCode + "," + pa.PassengerIdNo + "," + pa.TicketType + "_"
-	}
+	return num, nStr, oStr
+}
+func parseStranger(ticket *TicketQueryInfo) (oStr, nStr string) {
+	num := 0
+	num, oStr, nStr = plusNum(num, oStr, nStr, ticket.P1)
+	num, oStr, nStr = plusNum(num, oStr, nStr, ticket.P2)
+	num, oStr, nStr = plusNum(num, oStr, nStr, ticket.P3)
+	num, oStr, nStr = plusNum(num, oStr, nStr, ticket.P4)
+	num, oStr, nStr = plusNum(num, oStr, nStr, ticket.P5)
+
+	ticket.NumOfPassenger = num
 	return
 }
 func parseStrings(str string) (s []string) {
@@ -440,133 +258,10 @@ func parseStrings(str string) (s []string) {
 			}
 		}
 	}
+	if len(s) == 0 {
+		s = append(s, str)
+	}
 	return
-}
-
-//选择联系人
-func choosePassengers() {
-	p := mapPassengers[myPassengers.Text()]
-	c := passengers.Children()
-	for i := 0; i < 5; i++ {
-		name, _ := c.At(i*5 + 0).(*walk.LineEdit)
-		// Info(name.Text())
-		if strings.Trim(name.Text(), " ") == "" {
-			name.SetText(p.PassengerName)
-
-			ticketType, _ := c.At(i*5 + 1).(*walk.ComboBox)
-			ticketType.SetCurrentIndex(0)
-
-			noType, _ := c.At(i*5 + 2).(*walk.ComboBox)
-			noType.SetCurrentIndex(0)
-
-			IDNO, _ := c.At(i*5 + 3).(*walk.LineEdit)
-			// Info(IDNO.Text())
-			IDNO.SetText(p.PassengerIdNo)
-
-			seatType, _ := c.At(i*5 + 4).(*walk.ComboBox)
-			seatType.SetCurrentIndex(6)
-			break
-		}
-	}
-}
-func createLoginWin() {
-	go func() {
-		i := GetImage(Conf.CDN[0])
-		Im, _ := walk.NewBitmapFromImage(i)
-		captchaImage.SetImage(Im)
-
-		username.SetText("xuhong157499")
-		password.SetText("xuhong1990")
-	}()
-
-	if _, err := (MainWindow{
-		Name:     "loginWindow",
-		AssignTo: &loginWin.MainWindow,
-		Title:    "登陆",
-		MinSize:  Size{70, 70},
-		Layout:   VBox{},
-		DataBinder: DataBinder{
-			AssignTo:       &loginDB,
-			DataSource:     login,
-			ErrorPresenter: ErrorPresenterRef{&loginEP},
-		},
-
-		Children: []Widget{
-			Composite{
-				Layout: Grid{Columns: 2},
-				Name:   "loginPanel",
-				Children: []Widget{
-					Label{
-						Text: "用户名:",
-					},
-					LineEdit{
-						AssignTo:  &username,
-						Name:      "Username",
-						MaxLength: 30,
-						Text:      Bind("Username"),
-					},
-
-					Label{
-						Text: "密　码:",
-					},
-					LineEdit{
-						AssignTo:     &password,
-						Name:         "Password",
-						MaxLength:    32,
-						Text:         Bind("Password"),
-						PasswordMode: true,
-					},
-
-					Label{
-						Text: "验证码:",
-					},
-					LineEdit{
-						AssignTo:  &captchaEdit,
-						MaxLength: 4,
-						Text:      Bind("Captcha"),
-						OnKeyUp: func(key walk.Key) {
-							if key == walk.KeyReturn && len(captchaEdit.Text()) == 4 {
-								loginWin.Submit()
-							}
-							// if len(captchaEdit.Text()) == 4 {
-							// 	Info("no enter")
-							// 	loginWin.Submit()
-							// }
-						},
-					},
-					VSpacer{
-						ColumnSpan: 1,
-						Size:       8,
-					},
-					ImageView{
-						AssignTo: &captchaImage,
-						// Image:       Im,
-						// MinSize:     Size{150, 60},
-						// MaxSize:     Size{150, 60},
-						MinSize:     Size{78, 26},
-						MaxSize:     Size{78, 26},
-						ToolTipText: "单击刷新验证码",
-						OnMouseUp: func(x, y int, button walk.MouseButton) {
-							i := GetImage(Conf.CDN[0])
-							Im, _ := walk.NewBitmapFromImage(i)
-							captchaImage.SetImage(Im)
-						},
-					},
-					VSpacer{
-						ColumnSpan: 1,
-						Size:       8,
-					},
-					PushButton{
-						AssignTo:  &loginButton,
-						Text:      "登陆",
-						OnClicked: loginWin.Submit,
-					},
-				},
-			},
-		},
-	}.Run()); err != nil {
-		log.Fatal(err)
-	}
 }
 
 //获取新的验证码图片
@@ -620,40 +315,6 @@ func GetCookieFromRespHeader(resp *http.Response) (cookie string) {
 	}
 	cookie = d[:len(d)-2]
 	return
-}
-
-//登录逻辑
-func (loginWin *MyMainWindow) Submit() {
-	if err := loginDB.Submit(); err != nil {
-		Error("login faild! :", err)
-		return
-	}
-	Info(login)
-	if r, m := login.CheckRandCodeAnsyn(Conf.CDN[0]); !r {
-		msg := "验证码不正确！"
-		if len(m) > 0 {
-			msg = m[0]
-		}
-		captchaEdit.SetText("")
-		captchaEdit.SetFocus()
-		walk.MsgBox(loginWin, "提示", msg, walk.MsgBoxIconInformation)
-		return
-	}
-	if r, m := login.Login(Conf.CDN[0]); !r {
-		msg := "系统错误！"
-		if len(m) > 0 {
-			msg = m[0]
-		}
-		walk.MsgBox(loginWin, "提示", msg, walk.MsgBoxIconInformation)
-		img := GetImage(Conf.CDN[0])
-		Im, _ := walk.NewBitmapFromImage(img)
-		captchaImage.SetImage(Im)
-		captchaEdit.SetText("")
-		captchaEdit.SetFocus()
-		return
-	}
-	Info("登录成功！")
-	loginWin.Dispose()
 }
 
 //获取联系人

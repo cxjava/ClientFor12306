@@ -11,6 +11,7 @@ const (
 	UserLoginURL          = "https://kyfw.12306.cn/otn/login/userLogin"
 	PassCodeNewURL        = "https://kyfw.12306.cn/otn/passcodeNew/getPassCodeNew?module=login&rand=sjrand"
 	QueryLeftTicketURL    = "https://kyfw.12306.cn/otn/leftTicket/query?"
+	LogQueryLeftTicketURL = "https://kyfw.12306.cn/otn/leftTicket/log?"
 	GetPassengerDTOURL    = "https://kyfw.12306.cn/otn/confirmPassenger/getPassengerDTOs"
 	SubmitOrderRequestURL = "https://kyfw.12306.cn/otn/confirmPassenger/autoSubmitOrderRequest"
 	ConfirmSingleURL      = "https://kyfw.12306.cn/otn/confirmPassenger/confirmSingle"
@@ -21,6 +22,7 @@ const (
 	UserAgent           = `Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/34.0.1847.131 Safari/537.36`
 	Json_att            = ""
 	Tour_flag           = "dc"
+	Purpose_codes       = "ADULT"
 	Rand                = "sjrand"
 	Cancel_flag         = "2"
 	Bed_level_order_num = "000000000000000000000000000000"
