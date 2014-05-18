@@ -2,12 +2,27 @@ package main
 
 import "time"
 
+type Order struct {
+	CDN                string
+	SeatType           string
+	PassengerTicketStr string
+	OldPassengerStr    string
+	RepeatSubmitToken  string
+	SecretStr          string
+	TrainDate          time.Time
+	Ticket             Ticket
+	SubmitCaptchaStr   chan string
+	RandCode           string
+	KeyCheckIsChange   string
+	TrainLocation      string
+}
+
 type PassengerOrder struct {
 	Name                string
-	TicketType          string // 成人，学生
+	TicketType          string // 成人 学生
 	PassengerIdTypeCode string
 	PassengerIdNo       string
-	SeatType            string //席别：硬卧，硬座
+	SeatType            string //席别 硬卧 硬座
 	SeatTypeName        string
 }
 

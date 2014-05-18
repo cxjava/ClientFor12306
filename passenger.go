@@ -1,10 +1,5 @@
 package main
 
-type Basic struct {
-	ValidateMessagesShowId string `json:"validateMessagesShowId"`
-	Status                 bool   `json:"status"`
-	HttpStatus             int    `json:"httpstatus"`
-}
 type Passenger struct {
 	Code                string `json:"code"`
 	PassengerName       string `json:"passenger_name"`

@@ -38,6 +38,7 @@ func CheckRandCodeAnsyn(randCode, cdn string) (r bool, msg []string) {
 		Error("CheckRandCodeAnsyn url.QueryUnescape error:", err)
 		return false, []string{err.Error()}
 	}
+	Info(params)
 	content, err := DoForWardRequest(cdn, "POST", CheckRandCodeURL, strings.NewReader(params))
 	if err != nil {
 		Error("CheckRandCodeAnsyn DoForWardRequest error:", err)

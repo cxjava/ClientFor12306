@@ -13,14 +13,84 @@ import (
 	"strings"
 )
 
+type header map[string]string
+
+var HeaderMap = map[string]header{
+	"https://kyfw.12306.cn/otn/passcodeNew/checkRandCodeAnsyn": {
+		"Accept":           "*/*",
+		"Origin":           "https://kyfw.12306.cn",
+		"X-Requested-With": "XMLHttpRequest",
+	},
+	"https://kyfw.12306.cn/otn/login/loginAysnSuggest": {
+		"Accept":           "*/*",
+		"Origin":           "https://kyfw.12306.cn",
+		"X-Requested-With": "XMLHttpRequest",
+		"Referer":          "https://kyfw.12306.cn/otn/login/init",
+	},
+	"https://kyfw.12306.cn/otn/login/userLogin": {
+		"Accept":           "*/*",
+		"Origin":           "https://kyfw.12306.cn",
+		"X-Requested-With": "XMLHttpRequest",
+		"Referer":          "https://kyfw.12306.cn/otn/login/init",
+	},
+	"https://kyfw.12306.cn/otn/login/checkUser": {
+		"Accept":           "*/*",
+		"Origin":           "https://kyfw.12306.cn",
+		"X-Requested-With": "XMLHttpRequest",
+	},
+	"https://kyfw.12306.cn/otn/passcodeNew/getPassCodeNew.do?module=login&rand=sjrand&0.2680066132452339": {
+		"Accept":  "image/webp,*/*;q=0.8",
+		"Referer": "https://kyfw.12306.cn/otn/login/init",
+	},
+	"https://kyfw.12306.cn/otn/leftTicket/query?": {
+		"Accept":           "*/*",
+		"Cache-Control":    "no-store,no-cache",
+		"Pragma":           "no-cache",
+		"X-Requested-With": "XMLHttpRequest",
+	}, "https://kyfw.12306.cn/otn/dynamicJs/queryJs": {
+		"Accept":        "*/*",
+		"Cache-Control": "no-cache",
+	},
+	"https://kyfw.12306.cn/otn/leftTicket/log?": {
+		"Accept":           "*/*",
+		"Cache-Control":    "no-store,no-cache",
+		"Pragma":           "no-cache",
+		"X-Requested-With": "XMLHttpRequest",
+	},
+	"https://kyfw.12306.cn/otn/confirmPassenger/getPassengerDTOs": {
+		"Accept":           "*/*",
+		"Origin":           "https://kyfw.12306.cn",
+		"X-Requested-With": "XMLHttpRequest",
+	},
+	"https://kyfw.12306.cn/otn/confirmPassenger/autoSubmitOrderRequest": {
+		"Accept":           "*/*",
+		"Origin":           "https://kyfw.12306.cn",
+		"X-Requested-With": "XMLHttpRequest",
+	},
+	"https://kyfw.12306.cn/otn/confirmPassenger/confirmSingle": {
+		"Accept":           "application/json, text/javascript, */*; q=0.01",
+		"Origin":           "https://kyfw.12306.cn",
+		"X-Requested-With": "XMLHttpRequest",
+	},
+	"https://kyfw.12306.cn/otn/confirmPassenger/getQueueCountAsync": {
+		"Accept":           "application/json, text/javascript, */*; q=0.01",
+		"Origin":           "https://kyfw.12306.cn",
+		"X-Requested-With": "XMLHttpRequest",
+	},
+}
+
 //转发
 func DoForWardRequest(cdn, method, requestUrl string, body io.Reader) (string, error) {
+	return DoForWardRequestHeader(cdn, method, requestUrl, body, nil)
+}
+
+func DoForWardRequestHeader(cdn, method, requestUrl string, body io.Reader, customHeader map[string]string) (string, error) {
 	req, err := http.NewRequest(method, requestUrl, body)
 	if err != nil {
 		Error("DoForWardRequest http.NewRequest error:", err)
 		return "", err
 	}
-	AddReqestHeader(req, method)
+	AddReqestHeader(req, method, customHeader)
 
 	con, err := NewForwardClientConn(cdn, req.URL.Scheme)
 	if err != nil {
@@ -48,25 +118,26 @@ func DoForWardRequest(cdn, method, requestUrl string, body io.Reader) (string, e
 }
 
 //添加头
-func AddReqestHeader(request *http.Request, method string) {
+func AddReqestHeader(request *http.Request, method string, customHeader map[string]string) {
+	request.Header.Set("Connection", "Keep-Alive")
 	request.Header.Set("Host", "kyfw.12306.cn")
-	request.Header.Set("Connection", "keep-alive")
-	request.Header.Set("Cache-Control", "no-cache")
+	request.Header.Set("Accept-Encoding", "gzip,deflate")
+	request.Header.Set("Accept-Language", "zh-CN")
 	request.Header.Set("Accept", "*/*")
 	request.Header.Set("X-Requested-With", "XMLHttpRequest")
-	request.Header.Set("If-Modified-Since", "0")
+	request.Header.Set("Referer", "https://kyfw.12306.cn/otn/confirmPassenger/initDc")
 	request.Header.Set("User-Agent", UserAgent)
-	request.Header.Set("DNT", "1")
-
+	if login.Cookie != "" {
+		request.Header.Set("Cookie", login.Cookie)
+	}
 	if method == "POST" {
 		request.Header.Set("Content-Length", fmt.Sprintf("%d", request.ContentLength))
-		request.Header.Set("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
+		request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	}
-
-	request.Header.Set("Referer", "https://kyfw.12306.cn/otn/leftTicket/init")
-	request.Header.Set("Accept-Encoding", "gzip,deflate,sdch")
-	request.Header.Set("Accept-Language", "zh-CN,zh;q=0.8")
-	request.Header.Set("Cookie", login.Cookie)
+	for k, v := range customHeader {
+		request.Header.Set(k, v)
+	}
+	Info(request.Header)
 }
 
 //读取响应

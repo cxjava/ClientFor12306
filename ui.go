@@ -1,7 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"log"
+	"strconv"
 	"strings"
 	"time"
 
@@ -32,7 +34,7 @@ var (
 	submitCaptchaEdit  *walk.LineEdit
 	submitCaptchaEdit1 *walk.LineEdit
 	passengers         *walk.Composite
-	date               *walk.DateEdit
+	date               = &walk.DateEdit{}
 )
 
 type MyMainWindow struct {
@@ -45,7 +47,6 @@ func setSubmitImage() {
 	submitCaptchaImage.SetImage(Im)
 	submitCaptchaEdit.SetText("")
 	submitCaptchaEdit.SetFocus()
-	ticket.SubmitCaptchaStr = make(chan string)
 }
 func createUI() {
 	app := walk.App()
@@ -68,7 +69,6 @@ func createUI() {
 	app.SetSettings(settings)
 
 	createLoginWin()
-	createTicketWin()
 
 	if err := settings.Save(); err != nil {
 		log.Fatal(err)
@@ -77,10 +77,20 @@ func createUI() {
 }
 
 func createTicketWin() {
-	go getPassengerDTO()
 	go func() {
-		time.Sleep(time.Second * 2)
+		getPassengerDTO()
+		model := []string{}
+		for _, v1 := range passenger.Data.NormalPassengers {
+			model = append(model, v1.PassengerName)
+			mapPassengers[v1.PassengerName] = v1
+		}
+		myPassengers.SetModel(model)
+	}()
+
+	go func() {
+		time.Sleep(time.Second * 1)
 		date.SetRange(time.Now(), time.Now().AddDate(0, 0, 19))
+		date.SetDate(time.Now().AddDate(0, 0, 19))
 	}()
 	if _, err := (MainWindow{
 		Name:     "ticketWindow",
@@ -288,7 +298,7 @@ func createTicketWin() {
 						MaxLength: 4,
 						OnKeyUp: func(key walk.Key) {
 							if len(submitCaptchaEdit.Text()) == 4 {
-								if r, m := CheckRandCodeAnsyn(submitCaptchaEdit.Text(), Conf.CDN[0]); !r {
+								/*if r, m := order.checkRandCodeAnsyn(submitCaptchaEdit.Text()); !r {
 									msg := "验证码不正确！"
 									Info(msg)
 									if len(m) > 0 {
@@ -298,13 +308,14 @@ func createTicketWin() {
 									submitCaptchaEdit.SetFocus()
 									walk.MsgBox(ticketWin, "提示", msg, walk.MsgBoxIconInformation)
 									return
-								}
+								}*/
 								Info("success!")
-								ticket.SubmitCaptchaStr <- submitCaptchaEdit.Text()
+								order.RandCode = submitCaptchaEdit.Text()
+								go order.checkOrderInfo()
 							}
 							if key == walk.KeyReturn && len(submitCaptchaEdit.Text()) == 4 {
 							}
-
+							Info("over")
 						},
 					},
 					ImageView{
@@ -347,8 +358,13 @@ func createLoginWin() {
 		Im, _ := walk.NewBitmapFromImage(i)
 		captchaImage.SetImage(Im)
 
-		username.SetText("xuhong157499")
-		password.SetText("xuhong1990")
+		username.SetText("cxjava11")
+		password.SetText("Kee2209D6a050e5E")
+
+		fmt.Println(strconv.FormatInt(time.Now().UnixNano(), 10))
+		fmt.Println(time.Now().Unix())
+		Info(time.Now().UTC().Local().Format(time.RFC1123Z))
+		Info(time.Now().Local().Format(`Mon Jan 02 2006 15:04:05 GMT-0700 (China Standard Time)`))
 	}()
 
 	if _, err := (MainWindow{
@@ -485,6 +501,7 @@ func (loginWin *MyMainWindow) Submit() {
 		walk.MsgBox(loginWin, "提示", msg, walk.MsgBoxIconInformation)
 		return
 	}
+	go DoForWardRequest(Conf.CDN[0], "POST", CheckUserURL, nil)
 	if r, m := login.Login(Conf.CDN[0]); !r {
 		msg := "系统错误！"
 		if len(m) > 0 {
@@ -498,6 +515,9 @@ func (loginWin *MyMainWindow) Submit() {
 		captchaEdit.SetFocus()
 		return
 	}
+	go DoForWardRequest(Conf.CDN[0], "POST", CheckUserURL, nil)
+	go loginCheck(Conf.CDN[0])
 	Info("登录成功！")
 	loginWin.Dispose()
+	createTicketWin()
 }
