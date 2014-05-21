@@ -3,7 +3,9 @@ package main
 import (
 	"compress/gzip"
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
+	"image"
 	"io"
 	"io/ioutil"
 	"net"
@@ -13,70 +15,136 @@ import (
 	"strings"
 )
 
-type header map[string]string
+var passenger = &PassengerDTO{}
 
-var HeaderMap = map[string]header{
-	"https://kyfw.12306.cn/otn/passcodeNew/checkRandCodeAnsyn": {
-		"Accept":           "*/*",
-		"Origin":           "https://kyfw.12306.cn",
-		"X-Requested-With": "XMLHttpRequest",
-	},
-	"https://kyfw.12306.cn/otn/login/loginAysnSuggest": {
-		"Accept":           "*/*",
-		"Origin":           "https://kyfw.12306.cn",
-		"X-Requested-With": "XMLHttpRequest",
-		"Referer":          "https://kyfw.12306.cn/otn/login/init",
-	},
-	"https://kyfw.12306.cn/otn/login/userLogin": {
-		"Accept":           "*/*",
-		"Origin":           "https://kyfw.12306.cn",
-		"X-Requested-With": "XMLHttpRequest",
-		"Referer":          "https://kyfw.12306.cn/otn/login/init",
-	},
-	"https://kyfw.12306.cn/otn/login/checkUser": {
-		"Accept":           "*/*",
-		"Origin":           "https://kyfw.12306.cn",
-		"X-Requested-With": "XMLHttpRequest",
-	},
-	"https://kyfw.12306.cn/otn/passcodeNew/getPassCodeNew.do?module=login&rand=sjrand&0.2680066132452339": {
-		"Accept":  "image/webp,*/*;q=0.8",
-		"Referer": "https://kyfw.12306.cn/otn/login/init",
-	},
-	"https://kyfw.12306.cn/otn/leftTicket/query?": {
-		"Accept":           "*/*",
-		"Cache-Control":    "no-store,no-cache",
-		"Pragma":           "no-cache",
-		"X-Requested-With": "XMLHttpRequest",
-	}, "https://kyfw.12306.cn/otn/dynamicJs/queryJs": {
-		"Accept":        "*/*",
-		"Cache-Control": "no-cache",
-	},
-	"https://kyfw.12306.cn/otn/leftTicket/log?": {
-		"Accept":           "*/*",
-		"Cache-Control":    "no-store,no-cache",
-		"Pragma":           "no-cache",
-		"X-Requested-With": "XMLHttpRequest",
-	},
-	"https://kyfw.12306.cn/otn/confirmPassenger/getPassengerDTOs": {
-		"Accept":           "*/*",
-		"Origin":           "https://kyfw.12306.cn",
-		"X-Requested-With": "XMLHttpRequest",
-	},
-	"https://kyfw.12306.cn/otn/confirmPassenger/autoSubmitOrderRequest": {
-		"Accept":           "*/*",
-		"Origin":           "https://kyfw.12306.cn",
-		"X-Requested-With": "XMLHttpRequest",
-	},
-	"https://kyfw.12306.cn/otn/confirmPassenger/confirmSingle": {
-		"Accept":           "application/json, text/javascript, */*; q=0.01",
-		"Origin":           "https://kyfw.12306.cn",
-		"X-Requested-With": "XMLHttpRequest",
-	},
-	"https://kyfw.12306.cn/otn/confirmPassenger/getQueueCountAsync": {
-		"Accept":           "application/json, text/javascript, */*; q=0.01",
-		"Origin":           "https://kyfw.12306.cn",
-		"X-Requested-With": "XMLHttpRequest",
-	},
+//获取联系人
+func getPassengerDTO() {
+	for _, cdn := range Conf.CDN {
+		Info("开始获取联系人！")
+		body, err := DoForWardRequest(cdn, "POST", URLGetPassengerDTOs, nil)
+		if err != nil {
+			Error("getPassengerDTO DoForWardRequest error:", err)
+			continue
+		}
+		Debug("getPassengerDTO body:", body)
+
+		if !strings.Contains(body, "passenger_name") {
+			Error("获取联系人出错!!!!!!返回:", body)
+			continue
+		}
+
+		if err := json.Unmarshal([]byte(body), &passenger); err != nil {
+			Error("getPassengerDTO", cdn, err)
+			continue
+		} else {
+			Info(cdn, "获取成功！")
+			break
+		}
+	}
+	Debug(passenger)
+
+}
+
+func dyLoginJs(cdn string) error {
+	body, err := DoForWardRequest(cdn, "GET", URLLoginJs, nil)
+	if err != nil {
+		Error("dyLoginJs DoForWardRequest error:", err)
+		return err
+	}
+	Debug("dyLoginJs body:", body)
+	return nil
+}
+
+func dyQueryJs(cdn string) error {
+	body, err := DoForWardRequest(cdn, "GET", URLQueryJs, nil)
+	if err != nil {
+		Error("dyQueryJs DoForWardRequest error:", err)
+		return err
+	}
+	Debug("dyQueryJs body:", body)
+	return nil
+}
+
+func initQueryUserInfo(cdn string) error {
+	body, err := DoForWardRequest(cdn, "GET", URLInitQueryUserInfo, nil)
+	if err != nil {
+		Error("initQueryUserInfo DoForWardRequest error:", err)
+		return err
+	}
+	Debug("initQueryUserInfo body:", body)
+	return nil
+}
+
+func checkUser(cdn string) error {
+	body, err := DoForWardRequest(cdn, "POST", URLCheckUser, nil)
+	if err != nil {
+		Error("checkUser DoForWardRequest error:", err)
+		return err
+	}
+	Debug("checkUser body:", body)
+	return nil
+}
+
+func leftTicketInit(cdn string) error {
+	body, err := DoForWardRequest(cdn, "GET", URLInit, nil)
+	if err != nil {
+		Error("leftTicketInit DoForWardRequest error:", err)
+		return err
+	}
+	Debug("leftTicketInit body:", body)
+	return nil
+}
+
+//获取新的验证码图片
+func GetLoginImage(cdn string) image.Image {
+	req, err := http.NewRequest("GET", URLLoginPassCode, nil)
+	if err != nil {
+		Error("GetImage http.NewRequest error:", err)
+		return nil
+	}
+	AddReqestHeader(req, "GET", map[string]string{"Accept": "image/webp,*/*;q=0.8"})
+	req.Header.Del("X-Requested-With")
+	con, err := NewForwardClientConn(cdn, req.URL.Scheme)
+	if err != nil {
+		Error("GetImage newForwardClientConn error:", err)
+		return nil
+	}
+	defer con.Close()
+	resp, err := con.Do(req)
+	if err != nil {
+		Error("GetImage con.Do error:", err)
+		return nil
+	}
+	defer resp.Body.Close()
+
+	img, s, err := image.Decode(resp.Body)
+	Debug("image type:", s)
+	if err != nil {
+		Error("GetImage image.Decode:", err)
+		return nil
+	}
+	return img
+}
+
+//从响应消息头里面获取cookie
+func GetCookieFromRespHeader(resp *http.Response) (cookie string) {
+	cookies := []string{}
+	for k, v := range resp.Header {
+		Debug("k=", k, "v=", v)
+		if k == "Set-Cookie" {
+			for _, b := range v {
+				v := strings.Split(b, ";")[0]
+				cookies = append(cookies, v)
+				cookies = append(cookies, "; ")
+			}
+		}
+	}
+	d := strings.Join(cookies, "")
+	if len(d) < 2 {
+		return ""
+	}
+	cookie = d[:len(d)-2]
+	return
 }
 
 //转发
@@ -119,7 +187,7 @@ func DoForWardRequestHeader(cdn, method, requestUrl string, body io.Reader, cust
 
 //添加头
 func AddReqestHeader(request *http.Request, method string, customHeader map[string]string) {
-	request.Header.Set("Connection", "Keep-Alive")
+	// request.Header.Set("Connection", "Keep-Alive")
 	request.Header.Set("Host", "kyfw.12306.cn")
 	request.Header.Set("Accept-Encoding", "gzip,deflate")
 	request.Header.Set("Accept-Language", "zh-CN")

@@ -1,34 +1,25 @@
 package main
 
-import (
-	"fmt"
-	"strings"
-)
+import "strings"
 
 const (
-	CheckRandCodeURL      = "https://kyfw.12306.cn/otn/passcodeNew/checkRandCodeAnsyn"
-	LoginAysnSuggestURL   = "https://kyfw.12306.cn/otn/login/loginAysnSuggest"
-	UserLoginURL          = "https://kyfw.12306.cn/otn/login/userLogin"
-	CheckUserURL          = "https://kyfw.12306.cn/otn/login/checkUser"
-	PassCodeNewURL        = "https://kyfw.12306.cn/otn/passcodeNew/getPassCodeNew.do?module=login&rand=sjrand&0.2680066132452339"
-	QueryLeftTicketURL    = "https://kyfw.12306.cn/otn/leftTicket/query?"
-	LogQueryLeftTicketURL = "https://kyfw.12306.cn/otn/leftTicket/log?"
-	GetPassengerDTOURL    = "https://kyfw.12306.cn/otn/confirmPassenger/getPassengerDTOs"
-	SubmitOrderRequestURL = "https://kyfw.12306.cn/otn/confirmPassenger/autoSubmitOrderRequest"
-	ConfirmSingleURL      = "https://kyfw.12306.cn/otn/confirmPassenger/confirmSingle"
-	GetQueueCountURL      = "https://kyfw.12306.cn/otn/confirmPassenger/getQueueCountAsync"
-	QueryJsURL            = "https://kyfw.12306.cn/otn/dynamicJs/queryJs"
-	InitURL               = "https://kyfw.12306.cn/otn/leftTicket/init"
+	URLLoginJs           = "https://kyfw.12306.cn/otn/dynamicJs/loginJs"
+	URLLoginPassCode     = "https://kyfw.12306.cn/otn/passcodeNew/getPassCodeNew?module=login&rand=sjrand"
+	URLLoginAysnSuggest  = "https://kyfw.12306.cn/otn/login/loginAysnSuggest"
+	URLCheckUser         = "https://kyfw.12306.cn/otn/login/checkUser"
+	URLUserLogin         = "https://kyfw.12306.cn/otn/login/userLogin"
+	URLInitQueryUserInfo = "https://kyfw.12306.cn/otn/modifyUser/initQueryUserInfo"
+	URLLoginInit         = "https://kyfw.12306.cn/otn/login/init"
+	URLQueryJs           = "https://kyfw.12306.cn/otn/dynamicJs/queryJs"
 
-	URLLoginInit             = "https://kyfw.12306.cn/otn/login/init"
-	URLLoginJs               = "https://kyfw.12306.cn/otn/dynamicJs/loginJs"
-	URLInitQueryUserInfo     = "https://kyfw.12306.cn/otn/modifyUser/initQueryUserInfo"
-	URLCheckUser             = "https://kyfw.12306.cn/otn/login/checkUser"
-	URLQueryJs               = "https://kyfw.12306.cn/otn/dynamicJs/queryJs"
-	URLInit                  = "https://kyfw.12306.cn/otn/leftTicket/init"
+	URLGetPassengerDTOs = "https://kyfw.12306.cn/otn/confirmPassenger/getPassengerDTOs"
+
+	URLQuery                 = "https://kyfw.12306.cn/otn/leftTicket/query?"
+	URLQueryLog              = "https://kyfw.12306.cn/otn/leftTicket/log?"
 	URLSubmitOrderRequest    = "https://kyfw.12306.cn/otn/leftTicket/submitOrderRequest"
+	URLInit                  = "https://kyfw.12306.cn/otn/leftTicket/init"
 	URLInitDc                = "https://kyfw.12306.cn/otn/confirmPassenger/initDc"
-	URLPassCodeNewPassenger  = "https://kyfw.12306.cn/otn/passcodeNew/getPassCodeNew?module=passenger&rand=randp&_=0.1987"
+	URLPassCodeNewPassenger  = "https://kyfw.12306.cn/otn/passcodeNew/getPassCodeNew?module=passenger&rand=randp"
 	URLCheckRandCodeAnsyn    = "https://kyfw.12306.cn/otn/passcodeNew/checkRandCodeAnsyn"
 	URLCheckOrderInfo        = "https://kyfw.12306.cn/otn/confirmPassenger/checkOrderInfo"
 	URLQueueCount            = "https://kyfw.12306.cn/otn/confirmPassenger/getQueueCount"
@@ -61,5 +52,4 @@ func parseStationNames() {
 		v := strings.Split(station, "|")
 		StationMap[v[1]] = v[2]
 	}
-	fmt.Println("get all stations!")
 }

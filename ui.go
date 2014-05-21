@@ -1,9 +1,7 @@
 package main
 
 import (
-	"fmt"
 	"log"
-	"strconv"
 	"strings"
 	"time"
 
@@ -42,7 +40,7 @@ type MyMainWindow struct {
 }
 
 func setSubmitImage() {
-	i := GetImage(Conf.CDN[0], false)
+	i := GetLoginImage(Conf.CDN[0])
 	Im, _ := walk.NewBitmapFromImage(i)
 	submitCaptchaImage.SetImage(Im)
 	submitCaptchaEdit.SetText("")
@@ -76,6 +74,106 @@ func createUI() {
 
 }
 
+func createLoginWin() {
+	go func() {
+		dyLoginJs()
+		i := GetLoginImage(Conf.CDN[0])
+		Im, _ := walk.NewBitmapFromImage(i)
+		captchaImage.SetImage(Im)
+
+		username.SetText("cxjava3")
+		password.SetText("e9f87aa22f1364aB")
+	}()
+
+	if _, err := (MainWindow{
+		Name:     "loginWindow",
+		AssignTo: &loginWin.MainWindow,
+		Title:    "登陆",
+		MinSize:  Size{70, 70},
+		Layout:   VBox{},
+		DataBinder: DataBinder{
+			AssignTo:       &loginDB,
+			DataSource:     login,
+			ErrorPresenter: ErrorPresenterRef{&loginEP},
+		},
+
+		Children: []Widget{
+			Composite{
+				Layout: Grid{Columns: 2},
+				Name:   "loginPanel",
+				Children: []Widget{
+					Label{
+						Text: "用户名:",
+					},
+					LineEdit{
+						AssignTo:  &username,
+						Name:      "Username",
+						MaxLength: 30,
+						Text:      Bind("Username"),
+					},
+
+					Label{
+						Text: "密　码:",
+					},
+					LineEdit{
+						AssignTo:     &password,
+						Name:         "Password",
+						MaxLength:    32,
+						Text:         Bind("Password"),
+						PasswordMode: true,
+					},
+
+					Label{
+						Text: "验证码:",
+					},
+					LineEdit{
+						AssignTo:  &captchaEdit,
+						MaxLength: 4,
+						Text:      Bind("Captcha"),
+						OnKeyUp: func(key walk.Key) {
+							if key == walk.KeyReturn && len(captchaEdit.Text()) == 4 {
+								loginWin.Submit()
+							}
+							// if len(captchaEdit.Text()) == 4 {
+							// 	Info("no enter")
+							// 	loginWin.Submit()
+							// }
+						},
+					},
+					VSpacer{
+						ColumnSpan: 1,
+						Size:       8,
+					},
+					ImageView{
+						AssignTo: &captchaImage,
+						// Image:       Im,
+						// MinSize:     Size{150, 60},
+						// MaxSize:     Size{150, 60},
+						MinSize:     Size{78, 26},
+						MaxSize:     Size{78, 26},
+						ToolTipText: "单击刷新验证码",
+						OnMouseUp: func(x, y int, button walk.MouseButton) {
+							i := GetLoginImage(Conf.CDN[0])
+							Im, _ := walk.NewBitmapFromImage(i)
+							captchaImage.SetImage(Im)
+						},
+					},
+					VSpacer{
+						ColumnSpan: 1,
+						Size:       8,
+					},
+					PushButton{
+						AssignTo:  &loginButton,
+						Text:      "登陆",
+						OnClicked: loginWin.Submit,
+					},
+				},
+			},
+		},
+	}.Run()); err != nil {
+		log.Fatal(err)
+	}
+}
 func createTicketWin() {
 	go func() {
 		getPassengerDTO()
@@ -325,7 +423,7 @@ func createTicketWin() {
 						MaxSize:     Size{78, 26},
 						ToolTipText: "单击刷新验证码",
 						OnMouseUp: func(x, y int, button walk.MouseButton) {
-							i := GetImage(Conf.CDN[0], false)
+							i := GetLoginImage(Conf.CDN[0])
 							Im, _ := walk.NewBitmapFromImage(i)
 							submitCaptchaImage.SetImage(Im)
 						},
@@ -350,111 +448,6 @@ func createTicketWin() {
 		log.Fatal(err)
 	}
 
-}
-
-func createLoginWin() {
-	go func() {
-		i := GetImage(Conf.CDN[0], true)
-		Im, _ := walk.NewBitmapFromImage(i)
-		captchaImage.SetImage(Im)
-
-		username.SetText("cxjava11")
-		password.SetText("Kee2209D6a050e5E")
-
-		fmt.Println(strconv.FormatInt(time.Now().UnixNano(), 10))
-		fmt.Println(time.Now().Unix())
-		Info(time.Now().UTC().Local().Format(time.RFC1123Z))
-		Info(time.Now().Local().Format(`Mon Jan 02 2006 15:04:05 GMT-0700 (China Standard Time)`))
-	}()
-
-	if _, err := (MainWindow{
-		Name:     "loginWindow",
-		AssignTo: &loginWin.MainWindow,
-		Title:    "登陆",
-		MinSize:  Size{70, 70},
-		Layout:   VBox{},
-		DataBinder: DataBinder{
-			AssignTo:       &loginDB,
-			DataSource:     login,
-			ErrorPresenter: ErrorPresenterRef{&loginEP},
-		},
-
-		Children: []Widget{
-			Composite{
-				Layout: Grid{Columns: 2},
-				Name:   "loginPanel",
-				Children: []Widget{
-					Label{
-						Text: "用户名:",
-					},
-					LineEdit{
-						AssignTo:  &username,
-						Name:      "Username",
-						MaxLength: 30,
-						Text:      Bind("Username"),
-					},
-
-					Label{
-						Text: "密　码:",
-					},
-					LineEdit{
-						AssignTo:     &password,
-						Name:         "Password",
-						MaxLength:    32,
-						Text:         Bind("Password"),
-						PasswordMode: true,
-					},
-
-					Label{
-						Text: "验证码:",
-					},
-					LineEdit{
-						AssignTo:  &captchaEdit,
-						MaxLength: 4,
-						Text:      Bind("Captcha"),
-						OnKeyUp: func(key walk.Key) {
-							if key == walk.KeyReturn && len(captchaEdit.Text()) == 4 {
-								loginWin.Submit()
-							}
-							// if len(captchaEdit.Text()) == 4 {
-							// 	Info("no enter")
-							// 	loginWin.Submit()
-							// }
-						},
-					},
-					VSpacer{
-						ColumnSpan: 1,
-						Size:       8,
-					},
-					ImageView{
-						AssignTo: &captchaImage,
-						// Image:       Im,
-						// MinSize:     Size{150, 60},
-						// MaxSize:     Size{150, 60},
-						MinSize:     Size{78, 26},
-						MaxSize:     Size{78, 26},
-						ToolTipText: "单击刷新验证码",
-						OnMouseUp: func(x, y int, button walk.MouseButton) {
-							i := GetImage(Conf.CDN[0], true)
-							Im, _ := walk.NewBitmapFromImage(i)
-							captchaImage.SetImage(Im)
-						},
-					},
-					VSpacer{
-						ColumnSpan: 1,
-						Size:       8,
-					},
-					PushButton{
-						AssignTo:  &loginButton,
-						Text:      "登陆",
-						OnClicked: loginWin.Submit,
-					},
-				},
-			},
-		},
-	}.Run()); err != nil {
-		log.Fatal(err)
-	}
 }
 
 //选择联系人
@@ -501,22 +494,20 @@ func (loginWin *MyMainWindow) Submit() {
 		walk.MsgBox(loginWin, "提示", msg, walk.MsgBoxIconInformation)
 		return
 	}
-	go DoForWardRequest(Conf.CDN[0], "POST", CheckUserURL, nil)
 	if r, m := login.Login(Conf.CDN[0]); !r {
 		msg := "系统错误！"
 		if len(m) > 0 {
 			msg = m[0]
 		}
 		walk.MsgBox(loginWin, "提示", msg, walk.MsgBoxIconInformation)
-		img := GetImage(Conf.CDN[0], true)
+		img := GetLoginImage(Conf.CDN[0])
 		Im, _ := walk.NewBitmapFromImage(img)
 		captchaImage.SetImage(Im)
 		captchaEdit.SetText("")
 		captchaEdit.SetFocus()
 		return
 	}
-	go DoForWardRequest(Conf.CDN[0], "POST", CheckUserURL, nil)
-	go loginCheck(Conf.CDN[0])
+	login.userLogin()
 	Info("登录成功！")
 	loginWin.Dispose()
 	createTicketWin()
