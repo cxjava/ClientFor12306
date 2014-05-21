@@ -46,6 +46,7 @@ func setSubmitImage() {
 	submitCaptchaEdit.SetText("")
 	submitCaptchaEdit.SetFocus()
 }
+
 func createUI() {
 	app := walk.App()
 
@@ -76,7 +77,7 @@ func createUI() {
 
 func createLoginWin() {
 	go func() {
-		dyLoginJs()
+		setNewCookie(Conf.CDN[0])
 		i := GetLoginImage(Conf.CDN[0])
 		Im, _ := walk.NewBitmapFromImage(i)
 		captchaImage.SetImage(Im)
@@ -175,6 +176,10 @@ func createLoginWin() {
 	}
 }
 func createTicketWin() {
+	go checkUser(Conf.CDN[0])
+	go initQueryUserInfo(Conf.CDN[0])
+	go leftTicketInit(Conf.CDN[0])
+	go dyQueryJs(Conf.CDN[0])
 	go func() {
 		getPassengerDTO()
 		model := []string{}
@@ -396,24 +401,9 @@ func createTicketWin() {
 						MaxLength: 4,
 						OnKeyUp: func(key walk.Key) {
 							if len(submitCaptchaEdit.Text()) == 4 {
-								/*if r, m := order.checkRandCodeAnsyn(submitCaptchaEdit.Text()); !r {
-									msg := "验证码不正确！"
-									Info(msg)
-									if len(m) > 0 {
-										msg = m[0]
-									}
-									submitCaptchaEdit.SetText("")
-									submitCaptchaEdit.SetFocus()
-									walk.MsgBox(ticketWin, "提示", msg, walk.MsgBoxIconInformation)
-									return
-								}*/
-								Info("success!")
 								order.RandCode = submitCaptchaEdit.Text()
 								go order.checkOrderInfo()
 							}
-							if key == walk.KeyReturn && len(submitCaptchaEdit.Text()) == 4 {
-							}
-							Info("over")
 						},
 					},
 					ImageView{
@@ -423,9 +413,7 @@ func createTicketWin() {
 						MaxSize:     Size{78, 26},
 						ToolTipText: "单击刷新验证码",
 						OnMouseUp: func(x, y int, button walk.MouseButton) {
-							i := GetLoginImage(Conf.CDN[0])
-							Im, _ := walk.NewBitmapFromImage(i)
-							submitCaptchaImage.SetImage(Im)
+							order.getPassCodeNew()
 						},
 					},
 					PushButton{

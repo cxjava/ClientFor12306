@@ -55,6 +55,33 @@ func dyLoginJs(cdn string) error {
 	return nil
 }
 
+//获取新的cookie
+func setNewCookie(cdn string) error {
+	req, err := http.NewRequest("GET", URLLoginJs, nil)
+	if err != nil {
+		Error("setNewCookie http.NewRequest error:", err)
+		return nil
+	}
+
+	con, err := NewForwardClientConn(cdn, req.URL.Scheme)
+	if err != nil {
+		Error("setNewCookie newForwardClientConn error:", err)
+		return nil
+	}
+	defer con.Close()
+	resp, err := con.Do(req)
+	if err != nil {
+		Error("setNewCookie con.Do error:", err)
+		return nil
+	}
+	defer resp.Body.Close()
+
+	login.Cookie = GetCookieFromRespHeader(resp)
+	Info("==" + login.Cookie + "==")
+
+	return nil
+}
+
 func dyQueryJs(cdn string) error {
 	body, err := DoForWardRequest(cdn, "GET", URLQueryJs, nil)
 	if err != nil {

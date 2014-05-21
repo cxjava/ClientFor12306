@@ -36,18 +36,6 @@ func main() {
 
 //查询
 func (t *TicketQueryInfo) Order(cdn string) {
-	//睡眠下，随机
-	//time.Sleep(time.Millisecond * time.Duration(Config.System.SubmitTime))
-	//time.Sleep(time.Millisecond * time.Duration(rand.Int63n(Config.System.RefreshTime)))
-
-	// defer func() {
-	// <-queryChannel
-	// }()
-	// queryChannel <- 1
-
-	// queryJs(cdn)
-	DoForWardRequest(cdn, "GET", URLInit, nil)
-	DoForWardRequest(cdn, "GET", URLQueryJs, nil)
 
 	if tickets := t.queryLeftTicket(cdn); tickets != nil { //获取车次
 		for _, trainCode := range t.Trians { //要预订的车次
@@ -71,12 +59,13 @@ func (t *TicketQueryInfo) Order(cdn string) {
 							SeatType:           getSeatType(t.NumOfSeatType),
 						}
 						var err error
-
+						go checkUser(Conf.CDN[0])
 						err = order.submitOrderRequest()
 						if err != nil {
 							Error(err)
 							return
 						}
+						// leftTicketInit(Conf.CDN[0])
 						// t.queryLeftTicket(cdn)
 						// order.inits()
 						err = order.initDc()
@@ -84,8 +73,10 @@ func (t *TicketQueryInfo) Order(cdn string) {
 							Error(err)
 							return
 						}
+						dyQueryJs(Conf.CDN[0])
 						// go ticket.queryLeftTicket(order.CDN)
 						go order.getPassCodeNew()
+						break
 					} else {
 						Info("车次", tkt.StationTrainCode, "余票不足！！！剩余票：", fmt.Sprintf("%v", ticketNum), "订购的票:", fmt.Sprintf("%v", t.NumOfSeatType))
 					}

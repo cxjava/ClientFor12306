@@ -96,7 +96,7 @@ func (order *Order) getQueueCount() error {
 	}
 	Info("getQueueCount body:", body)
 
-	time.Sleep(time.Second * 8)
+	// time.Sleep(time.Second * 8)
 	return order.confirmSingleForQueue()
 }
 
@@ -131,7 +131,7 @@ func (order *Order) checkOrderInfo() error {
 	if !coi.Data.SubmitStatus {
 		return fmt.Errorf("checkOrderInfo 出错！body:%v", body)
 	}
-	time.Sleep(time.Second * 8)
+	// time.Sleep(time.Second * 8)
 	return order.getQueueCount()
 }
 
@@ -195,7 +195,6 @@ func (order *Order) getPassCodeNew() error {
 	submitCaptchaImage.SetImage(Im)
 	submitCaptchaEdit.SetText("")
 	submitCaptchaEdit.SetFocus()
-	go getPassengerDTO()
 	return nil
 }
 
