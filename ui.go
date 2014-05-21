@@ -176,10 +176,10 @@ func createLoginWin() {
 	}
 }
 func createTicketWin() {
-	go checkUser(Conf.CDN[0])
-	go initQueryUserInfo(Conf.CDN[0])
-	go leftTicketInit(Conf.CDN[0])
-	go dyQueryJs(Conf.CDN[0])
+	checkUser(Conf.CDN[0])
+	initQueryUserInfo(Conf.CDN[0])
+	leftTicketInit(Conf.CDN[0])
+	dyQueryJs(Conf.CDN[0])
 	go func() {
 		getPassengerDTO()
 		model := []string{}

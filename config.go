@@ -25,5 +25,7 @@ func ReadConfig() error {
 		fmt.Println(err)
 		return err
 	}
+
+	PrepareClient()
 	return nil
 }

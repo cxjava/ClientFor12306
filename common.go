@@ -15,7 +15,10 @@ import (
 	"strings"
 )
 
-var passenger = &PassengerDTO{}
+var (
+	passenger = &PassengerDTO{}
+	Client    = &http.Client{}
+)
 
 //获取联系人
 func getPassengerDTO() {
@@ -179,6 +182,25 @@ func DoForWardRequest(cdn, method, requestUrl string, body io.Reader) (string, e
 	return DoForWardRequestHeader(cdn, method, requestUrl, body, nil)
 }
 
+func PrepareClient() {
+	Client = &http.Client{
+		Transport: &http.Transport{
+			Dial: func(netw, addr string) (net.Conn, error) {
+				// deadline := time.Now().Add(25 * time.Second)
+				// c, err := net.DialTimeout(netw, addr, time.Second*20)
+				c, err := tls.Dial("tcp", Conf.CDN[0]+":443", &tls.Config{
+					InsecureSkipVerify: true,
+				})
+				if err != nil {
+					return nil, err
+				}
+				// c.SetDeadline(deadline)
+				return c, nil
+			},
+		},
+	}
+}
+
 func DoForWardRequestHeader(cdn, method, requestUrl string, body io.Reader, customHeader map[string]string) (string, error) {
 	req, err := http.NewRequest(method, requestUrl, body)
 	if err != nil {
@@ -187,13 +209,14 @@ func DoForWardRequestHeader(cdn, method, requestUrl string, body io.Reader, cust
 	}
 	AddReqestHeader(req, method, customHeader)
 
-	con, err := NewForwardClientConn(cdn, req.URL.Scheme)
-	if err != nil {
-		Error("DoForWardRequest newForwardClientConn error:", err)
-		return "", err
-	}
-	defer con.Close()
-	resp, err := con.Do(req)
+	// con, err := NewForwardClientConn(cdn, req.URL.Scheme)
+	// if err != nil {
+	// 	Error("DoForWardRequest newForwardClientConn error:", err)
+	// 	return "", err
+	// }
+	// defer con.Close()
+	// resp, err := con.Do(req)
+	resp, err := Client.Do(req)
 	if err != nil {
 		Error("DoForWardRequest con.Do error:", err)
 		return "", err
@@ -272,7 +295,7 @@ func NewForwardClientConn(forwardAddress, scheme string) (*httputil.ClientConn, 
 			Error("newForwardClientConn net.Dial error:", err)
 			return nil, err
 		}
-		return httputil.NewClientConn(conn, nil), nil
+		return httputil.NewProxyClientConn(conn, nil), nil
 	}
 	conn, err := tls.Dial("tcp", forwardAddress+":443", &tls.Config{
 		InsecureSkipVerify: true,
@@ -281,7 +304,7 @@ func NewForwardClientConn(forwardAddress, scheme string) (*httputil.ClientConn, 
 		Error("newForwardClientConn tls.Dial error:", err)
 		return nil, err
 	}
-	return httputil.NewClientConn(conn, nil), nil
+	return httputil.NewProxyClientConn(conn, nil), nil
 }
 
 //获取车票余票信息
