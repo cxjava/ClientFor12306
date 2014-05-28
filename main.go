@@ -1,212 +1,142 @@
 package main
 
 import (
-	"encoding/json"
+	"crypto/tls"
 	"fmt"
-	"math/rand"
-	"strconv"
-	"strings"
+	"image"
+	"image/jpeg"
+	"io/ioutil"
+	"log"
+	"net"
+	"net/http"
+	"os"
 	"time"
 
-	_ "image/gif"
-	_ "image/jpeg"
-	_ "image/png"
+	"github.com/go-martini/martini"
+	"github.com/martini-contrib/render"
+	"github.com/nfnt/resize"
 )
 
 var (
-	SubmitCaptchaStr = make(chan string)
-	login            = &Login{}
-	ticket           = &TicketQueryInfo{
-		SubmitCaptchaStr: make(chan string),
-		P1:               &PassengerOrder{},
-		P2:               &PassengerOrder{},
-		P3:               &PassengerOrder{},
-		P4:               &PassengerOrder{},
-		P5:               &PassengerOrder{},
+	client = &http.Client{
+		Transport: &http.Transport{
+			// Proxy:           http.ProxyURL(pr),
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		},
 	}
-
-	mapPassengers = make(map[string]Passenger)
 )
 
+func TimeoutDialer(cTimeout time.Duration, rwTimeout time.Duration) func(net, addr string) (c net.Conn, err error) {
+	return func(netw, addr string) (net.Conn, error) {
+		// conn, err := net.DialTimeout(netw, addr, cTimeout)
+		fmt.Println(netw)
+		fmt.Println(addr)
+		conn, err := tls.Dial(netw, addr, &tls.Config{
+			InsecureSkipVerify: true,
+		})
+		if err != nil {
+			fmt.Println("ccc", err)
+			return nil, err
+		}
+		//conn.SetDeadline(time.Now().Add(rwTimeout))
+		return conn, nil
+	}
+}
+
+func NewTimeoutClient(connectTimeout time.Duration, readWriteTimeout time.Duration) *http.Client {
+
+	return &http.Client{
+		Transport: &http.Transport{
+			//	TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			Dial: TimeoutDialer(connectTimeout, readWriteTimeout),
+		},
+	}
+}
+
 func main() {
+	m := martini.Classic()
+	// render html templates from templates directory
+	// m.Use(render.Renderer())
+	m.Use(render.Renderer(render.Options{
+		Directory: "templates", // Specify what path to load the templates from.
+		// Layout:     "layout",          // Specify a layout template. Layouts can call {{ yield }} to render the current template.
+		Extensions: []string{".html"}, // Specify extensions to load for templates.
+		// Funcs:      []template.FuncMap{render.AppHelpers}, // Specify helper function maps for templates to access.
+		Delims:     render.Delims{"{[{", "}]}"}, // Sets delimiters to the specified strings.
+		Charset:    "UTF-8",                     // Sets encoding for json and html content-types. Default is "UTF-8".
+		IndentJSON: true,                        // Output human readable JSON
+	}))
 
-	createUI()
+	m.Get("/", func(r render.Render) {
+		r.HTML(200, "login", "jeremy")
+	})
 
-}
-
-//查询
-func (t *TicketQueryInfo) Order(cdn string) {
-
-	if tickets := t.queryLeftTicket(cdn); tickets != nil { //获取车次
-		for _, trainCode := range t.Trians { //要预订的车次
-			trainCode = strings.ToUpper(trainCode)
-			for _, data := range tickets.Data { //每个车次
-				//查询到的车次
-				tkt := data.Ticket
-				if tkt.StationTrainCode == strings.ToUpper(trainCode) { //是预订的车次
-					//获取余票信息
-					ticketNum := GetTicketNum(tkt.YpInfo, tkt.YpEx)
-					if validateNum(ticketNum, t.NumOfSeatType) { //想要预订席别的余票大于等于订票人的人数
-						Info(cdn, "开始订票", t.TrainDate.Format("2006-01-02"), "车次", tkt.StationTrainCode, "余票", fmt.Sprintf("%v", ticketNum))
-						order = &Order{
-							CDN:                cdn,
-							PassengerTicketStr: t.PassengerTicketStr,
-							OldPassengerStr:    t.OldPassengerStr,
-							Ticket:             tkt,
-							SecretStr:          data.SecretStr,
-							SubmitCaptchaStr:   make(chan string),
-							TrainDate:          t.TrainDate,
-							SeatType:           getSeatType(t.NumOfSeatType),
-						}
-						var err error
-						go checkUser(Conf.CDN[0])
-						err = order.submitOrderRequest()
-						if err != nil {
-							Error(err)
-							return
-						}
-						// leftTicketInit(Conf.CDN[0])
-						// t.queryLeftTicket(cdn)
-						// order.inits()
-						err = order.initDc()
-						if err != nil {
-							Error(err)
-							return
-						}
-						dyQueryJs(Conf.CDN[0])
-						// go ticket.queryLeftTicket(order.CDN)
-						go order.getPassCodeNew()
-						break
-					} else {
-						Info("车次", tkt.StationTrainCode, "余票不足！！！剩余票：", fmt.Sprintf("%v", ticketNum), "订购的票:", fmt.Sprintf("%v", t.NumOfSeatType))
+	m.Get("/loginPassCodeNew1", func(res http.ResponseWriter, req *http.Request) { // res and req are injected by Martini
+		res.Header().Add("key", "value")
+		res.Header().Set("Content-Type", "image/jpeg")
+		res.WriteHeader(200) // HTTP 200
+	})
+	m.Get("/loginPassCodeNew/**", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
+		res.Header().Set("Content-Type", "image/jpeg")
+		// client = NewTimeoutClient(20*time.Second, 20*time.Second)
+		c := http.Client{
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+				Dial: func(netw, addr string) (net.Conn, error) {
+					deadline := time.Now().Add(10 * time.Second)
+					c, err := net.DialTimeout(netw, Conf.CDN[0]+":443", time.Second*10)
+					if err != nil {
+						return nil, err
 					}
-				} else { //不是预订的车次
-					//Debug(tkt.StationTrainCode, "余票", fmt.Sprintf("%v", getTicketNum(tkt.YpInfo, tkt.YpEx)))
-				}
-			}
+					c.SetDeadline(deadline)
+					return c, nil
+				},
+			},
 		}
-	} else {
-		Error(cdn, "余票查询错误", tickets)
-	}
-}
-func getSeatType(seatTypeNum map[string]int) (t string) {
-	t = "3"
-	max, name := 0, "硬卧"
-	for k, v := range seatTypeNum {
-		if v > max {
-			max, name = v, k
+		rsp, err := c.Get(URLLoginPassCode + "&" + params["_1"])
+		if err != nil {
+			fmt.Println("aaa", err)
+			return
 		}
-	}
-	t = SeatTypeNameToV[name]
-	return
-}
-func validateNum(ticketNum, seatTypeNum map[string]int) (b bool) {
-	b = true
-	for k, v := range seatTypeNum {
-		Info(k, v, ticketNum[k])
-		if ticketNum[k] < v {
-			b = false
-			break
+		defer rsp.Body.Close()
+
+		bodyByte, err := ioutil.ReadAll(rsp.Body)
+		if err != nil {
+			Error("ioutil.ReadAll:", err)
 		}
-	}
-	return
+
+		res.Write(bodyByte)
+		res.WriteHeader(200)
+
+	})
+	// nodeWebkit, err := nw.New()
+	// if err != nil {
+	// 	panic(err)
+	// }
+	Info("a")
+	// Pick a random localhost port, start listening for http requests using default handler
+	// and send a message back to node-webkit to redirect
+	// if err := nodeWebkit.ListenAndServe(m); err != nil {
+	// 	panic(err)
+	// }
+	Info("b")
+	m.Run()
+	Info("c")
+	// log.Fatal(http.ListenAndServe(":8080", m))
 }
-
-//查询余票
-func (t *TicketQueryInfo) queryLeftTicket(cdn string) *QueryLeftNewDTO {
-	fr := t.FromStations
-	to := t.ToStations
-	leftTicketUrl := ""
-	leftTicketUrl += "leftTicketDTO.train_date=" + t.TrainDate.Format("2006-01-02") + "&"
-	leftTicketUrl += "leftTicketDTO.from_station=" + StationMap[fr[rand.Intn(len(fr))]] + "&"
-	leftTicketUrl += "leftTicketDTO.to_station=" + StationMap[to[rand.Intn(len(to))]] + "&"
-	leftTicketUrl += "purpose_codes=ADULT"
-
-	Info("queryLeftTicket url:", leftTicketUrl)
-
-	go DoForWardRequest(cdn, "GET", URLQueryLog+leftTicketUrl, nil)
-
-	h := map[string]string{"If-Modified-Since": time.Now().Local().Format(time.RFC1123Z),
-		"If-None-Match": strconv.FormatInt(time.Now().UnixNano(), 10)}
-
-	body, err := DoForWardRequestHeader(cdn, "GET", URLQuery+leftTicketUrl, nil, h)
+func thumb() image.Image {
+	file, err := os.Open("test.jpg")
 	if err != nil {
-		Error("queryLeftTicket DoForWardRequest error:", err)
-		return nil
-	}
-	Debug("queryLeftTicket body:", body)
-
-	if !strings.Contains(body, "queryLeftNewDTO") {
-		Error("查询余票出错，返回:", body, "查询链接:", leftTicketUrl)
-		//删除废弃的CDN
-		// if len(availableCDN) > 5 {
-		// delete(availableCDN, cdn)
-		// }
-		return nil
-	}
-	leftTicket := &QueryLeftNewDTO{}
-
-	if err := json.Unmarshal([]byte(body), &leftTicket); err != nil {
-		Error("queryLeftTicket", cdn, err)
-		return nil
-	} else {
-		Info(cdn, "获取成功！")
+		log.Fatal(err)
 	}
 
-	return leftTicket
-}
-
-func parseTicket() {
-	ticket.FromStations = parseStrings(ticket.FromStationsStr)
-	ticket.ToStations = parseStrings(ticket.ToStationsStr)
-	ticket.Trians = parseStrings(ticket.TriansStr)
-
-	o, n := parseStranger(ticket)
-	ticket.OldPassengerStr = o
-	ticket.PassengerTicketStr = n[:len(n)-1]
-
-	ticket.Order(Conf.CDN[0])
-}
-func plusNum(num int, oStr, nStr string, p *PassengerOrder, m map[string]int) (int, string, string, map[string]int) {
-	if strings.Trim(p.Name, " ") != "" {
-		name := SeatTypeValueToN[p.SeatType]
-		m[name] = m[name] + 1
-		nStr += p.SeatType + ",0," + p.TicketType + "," + p.Name + "," + p.PassengerIdTypeCode + "," + p.PassengerIdNo + ",,N_"
-		oStr += p.Name + "," + p.PassengerIdTypeCode + "," + p.PassengerIdNo + "," + p.TicketType + "_"
-		return num + 1, oStr, nStr, m
+	img, err := jpeg.Decode(file)
+	if err != nil {
+		log.Fatal(err)
 	}
-	return num, oStr, nStr, m
-}
-func parseStranger(ticket *TicketQueryInfo) (oStr, nStr string) {
-	num := 0
-	m := make(map[string]int)
-	num, oStr, nStr, m = plusNum(num, oStr, nStr, ticket.P1, m)
-	num, oStr, nStr, m = plusNum(num, oStr, nStr, ticket.P2, m)
-	num, oStr, nStr, m = plusNum(num, oStr, nStr, ticket.P3, m)
-	num, oStr, nStr, m = plusNum(num, oStr, nStr, ticket.P4, m)
-	num, oStr, nStr, m = plusNum(num, oStr, nStr, ticket.P5, m)
+	file.Close()
 
-	ticket.NumOfPassenger = num
-	ticket.NumOfSeatType = m
-	return
-}
-func parseStrings(str string) (s []string) {
-	if strings.ContainsRune(str, rune('，')) {
-		for _, v := range strings.Split(str, "，") {
-			if v != "" {
-				s = append(s, v)
-			}
-		}
-	}
-	if strings.ContainsRune(str, rune(',')) {
-		for _, v := range strings.Split(str, ",") {
-			if v != "" {
-				s = append(s, v)
-			}
-		}
-	}
-	if len(s) == 0 {
-		s = append(s, str)
-	}
-	return
+	m := resize.Resize(0, 200, img, resize.MitchellNetravali)
+
+	return m
 }

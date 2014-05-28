@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="shortcut icon" href="/img/favicon.ico">
+
+    <link href="/css/bootstrap.min.css" rel="stylesheet" type="text/css">
+    <link href="/css/bootstrap-theme.min.css" rel="stylesheet" type="text/css">
+    <link href="/css/styles.css" rel="stylesheet" type="text/css">
+
+</head>
+
+<body>
+    <div class="container">
+        <form class="form-login" role="form">
+            <input type="text" class="form-control" id="username" value="" placeholder="用户名" required autofocus>
+            <input type="password" class="form-control" id="password" value="" placeholder="密　码" required>
+            <input type="text" class="form-control" id="code" value="" placeholder="验证码" required>
+            <span class="code" >
+                <img src="/loginPassCodeNew/" id="img" title="单击刷新验证码">
+            </span>
+            <label class="checkbox">
+                <input type="checkbox" value="remember-me">记住我
+            </label>
+            <button class="btn btn-primary btn-block" type="submit">登录</button>
+        </form>
+
+    </div>
+    <!-- /container -->
+
+    <script src="/js/jquery-1.11.1.min.js"></script>
+    <script src="/js/bootstrap.min.js"></script>
+    <script src="/js/common.js"></script>
+</body>
+
+</html>

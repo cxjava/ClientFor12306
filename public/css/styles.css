@@ -1,0 +1,15 @@
+body {
+    padding-top: 40px;
+    padding-bottom: 40px;
+    background-color: #eee;
+}
+.form-login {
+    max-width: 230px;
+    padding: 15px;
+    margin: 0 auto;
+}
+.code img {
+    display: block;
+    width: 78px;
+    height: 38px;
+}
