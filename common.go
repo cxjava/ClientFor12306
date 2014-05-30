@@ -13,6 +13,7 @@ import (
 	"net/http/httputil"
 	"strconv"
 	"strings"
+	"time"
 )
 
 var (
@@ -185,12 +186,13 @@ func DoForWardRequest(cdn, method, requestUrl string, body io.Reader) (string, e
 func PrepareClient() {
 	Client = &http.Client{
 		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 			Dial: func(netw, addr string) (net.Conn, error) {
 				// deadline := time.Now().Add(25 * time.Second)
-				// c, err := net.DialTimeout(netw, addr, time.Second*20)
-				c, err := tls.Dial("tcp", Conf.CDN[0]+":443", &tls.Config{
-					InsecureSkipVerify: true,
-				})
+				c, err := net.DialTimeout(netw, addr, time.Second*20)
+				// c, err := tls.Dial("tcp", Conf.CDN[0]+":443", &tls.Config{
+				// InsecureSkipVerify: true,
+				// })
 				if err != nil {
 					return nil, err
 				}
