@@ -1,6 +1,5 @@
 body {
     background-color: #eee;
-    margin-top: 10px;
 }
 .dialog {
     position:absolute;
@@ -15,4 +14,13 @@ body {
     display: block;
     width: 78px;
     height: 38px;
+}
+.mypanel {
+    position:absolute;
+    left:50%;
+    top:50%;
+    width:660px;
+    height: 450px;
+    margin-left:-330px;
+    margin-top: -225px;
 }

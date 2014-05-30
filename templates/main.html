@@ -20,13 +20,12 @@
 <body>
     <div class="container">
         <div class="row">
-            <div class="col-xs-offset-2 col-sm-offset-2 col-xs-8 col-sm-8">
+            <div class="mypanel">
                 <div class="panel panel-default">
                     <div class="panel-heading">
-                        <h3 class="panel-title">Panel title</h3>
+                        <h3 class="panel-title">查询</h3>
                     </div>
                     <div class="panel-body">
-
                         <form class="form-inline" role="form">
                             <p>
                                 <div class="form-group">
@@ -50,105 +49,175 @@
                                         <option value="AL">Alabama</option>
                                         <option value="WY">Wyoming</option>
                                     </select>
+                                </div>&nbsp;&nbsp;
+                                <button type="submit" class="btn btn-info">查询</button>
+                                &nbsp;&nbsp;
+                                <input type="text" style="width:80px;" class="form-control" id="code" name="code" placeholder="验证码" required>
+                                <div class="form-group">
+                                    <!-- <img src="/loginPassCodeNew/" id="img" title="单击刷新验证码"> -->
                                 </div>
-                                <button type="submit" class="btn btn-default">查询</button>
                             </p>
                             <p>
                                 <ul class="list-group">
                                     <li class="list-group-item p1">
-                                        <input type="text" style="width:80px;" class="form-control input-sm" id="start" placeholder="乘客姓名" required>
-                                        <select data-placeholder="票种" class="form-control " required>
-                                            <option></option>
-                                            <option value="AL">Alabama</option>
-                                            <option value="WY">Wyoming</option>
+                                        <input type="text" style="width:80px;" class="form-control input-sm" placeholder="乘客姓名" required>
+                                        <select data-placeholder="票种" style="width:85px;" class="form-control " required>
+                                            <option value="1">成人票</option>
+                                            <option value="2">小孩票</option>
+                                            <option value="3">学生票</option>
+                                            <option value="4">伤残军人票</option>
                                         </select>
-                                        <select data-placeholder="席别" class="form-control " required>
-                                            <option></option>
-                                            <option value="AL">Alabama</option>
-                                            <option value="WY">Wyoming</option>
+                                        <select data-placeholder="席别" style="width:85px;" class="form-control " required>
+                                            <option value="3">硬卧</option>
+                                            <option value="O">二等座</option>
+                                            <option value="M">一等座</option>
+                                            <option value="9">商务座</option>
+                                            <option value="P">特等座</option>
+                                            <option value="1">硬座</option>
+                                            <option value="2">软座</option>
+                                            <option value="4">软卧</option>
+                                            <option value="6">高级软卧</option>
+                                            <option value="WZ">无座</option>
                                         </select>
-                                        <select data-placeholder="证件类型" class="form-control " required>
-                                            <option></option>
-                                            <option value="AL">Alabama</option>
-                                            <option value="WY">Wyoming</option>
+                                        <select data-placeholder="证件类型" style="width:110px;" class="form-control " required>
+                                            <option value="1">二代身份证</option>
+                                            <option value="C">港澳通行证</option>
+                                            <option value="G">台湾通行证</option>
+                                            <option value="B">护照</option>
+                                            <option value="H">外国人居留证</option>
                                         </select>
                                         <input type="text" class="form-control input-sm" placeholder="证件号码" required>
+                                        <button type="button" class="btn btn-warning input-sm">
+                                            <span class="glyphicon glyphicon-remove"></span>
+                                        </button>
                                     </li>
                                     <li class="list-group-item p2">
                                         <input type="text" style="width:80px;" class="form-control input-sm" placeholder="乘客姓名">
-                                        <select data-placeholder="票种" class="form-control ">
-                                            <option></option>
-                                            <option value="AL">Alabama</option>
-                                            <option value="WY">Wyoming</option>
+                                        <select data-placeholder="票种" style="width:85px;" class="form-control ">
+                                            <option value="1">成人票</option>
+                                            <option value="2">小孩票</option>
+                                            <option value="3">学生票</option>
+                                            <option value="4">伤残军人票</option>
                                         </select>
-                                        <select data-placeholder="席别" class="form-control ">
-                                            <option></option>
-                                            <option value="AL">Alabama</option>
-                                            <option value="WY">Wyoming</option>
+                                        <select data-placeholder="席别" style="width:85px;" class="form-control ">
+                                            <option value="3">硬卧</option>
+                                            <option value="O">二等座</option>
+                                            <option value="M">一等座</option>
+                                            <option value="9">商务座</option>
+                                            <option value="P">特等座</option>
+                                            <option value="1">硬座</option>
+                                            <option value="2">软座</option>
+                                            <option value="4">软卧</option>
+                                            <option value="6">高级软卧</option>
+                                            <option value="WZ">无座</option>
                                         </select>
-                                        <select data-placeholder="证件类型" class="form-control ">
-                                            <option></option>
-                                            <option value="AL">Alabama</option>
-                                            <option value="WY">Wyoming</option>
+                                        <select data-placeholder="证件类型" style="width:110px;" class="form-control ">
+                                            <option value="1">二代身份证</option>
+                                            <option value="C">港澳通行证</option>
+                                            <option value="G">台湾通行证</option>
+                                            <option value="B">护照</option>
+                                            <option value="H">外国人居留证</option>
                                         </select>
                                         <input type="text" class="form-control input-sm" placeholder="证件号码">
+                                        <button type="button" class="btn btn-warning input-sm">
+                                            <span class="glyphicon glyphicon-remove"></span>
+                                        </button>
                                     </li>
                                     <li class="list-group-item p3">
                                         <input type="text" style="width:80px;" class="form-control input-sm" placeholder="乘客姓名">
-                                        <select data-placeholder="票种" class="form-control ">
-                                            <option></option>
-                                            <option value="AL">Alabama</option>
-                                            <option value="WY">Wyoming</option>
+                                        <select data-placeholder="票种" style="width:85px;" class="form-control ">
+                                            <option value="1">成人票</option>
+                                            <option value="2">小孩票</option>
+                                            <option value="3">学生票</option>
+                                            <option value="4">伤残军人票</option>
                                         </select>
-                                        <select data-placeholder="席别" class="form-control ">
-                                            <option></option>
-                                            <option value="AL">Alabama</option>
-                                            <option value="WY">Wyoming</option>
+                                        <select data-placeholder="席别" style="width:85px;" class="form-control ">
+                                            <option value="3">硬卧</option>
+                                            <option value="O">二等座</option>
+                                            <option value="M">一等座</option>
+                                            <option value="9">商务座</option>
+                                            <option value="P">特等座</option>
+                                            <option value="1">硬座</option>
+                                            <option value="2">软座</option>
+                                            <option value="4">软卧</option>
+                                            <option value="6">高级软卧</option>
+                                            <option value="WZ">无座</option>
                                         </select>
-                                        <select data-placeholder="证件类型" class="form-control ">
-                                            <option></option>
-                                            <option value="AL">Alabama</option>
-                                            <option value="WY">Wyoming</option>
+                                        <select data-placeholder="证件类型" style="width:110px;" class="form-control ">
+                                            <option value="1">二代身份证</option>
+                                            <option value="C">港澳通行证</option>
+                                            <option value="G">台湾通行证</option>
+                                            <option value="B">护照</option>
+                                            <option value="H">外国人居留证</option>
                                         </select>
                                         <input type="text" class="form-control input-sm" placeholder="证件号码">
+                                        <button type="button" class="btn btn-warning input-sm">
+                                            <span class="glyphicon glyphicon-remove"></span>
+                                        </button>
                                     </li>
                                     <li class="list-group-item p4">
                                         <input type="text" style="width:80px;" class="form-control input-sm" placeholder="乘客姓名">
-                                        <select data-placeholder="票种" class="form-control ">
-                                            <option></option>
-                                            <option value="AL">Alabama</option>
-                                            <option value="WY">Wyoming</option>
+                                        <select data-placeholder="票种" style="width:85px;" class="form-control ">
+                                            <option value="1">成人票</option>
+                                            <option value="2">小孩票</option>
+                                            <option value="3">学生票</option>
+                                            <option value="4">伤残军人票</option>
                                         </select>
-                                        <select data-placeholder="席别" class="form-control ">
-                                            <option></option>
-                                            <option value="AL">Alabama</option>
-                                            <option value="WY">Wyoming</option>
+                                        <select data-placeholder="席别" style="width:85px;" class="form-control ">
+                                            <option value="3">硬卧</option>
+                                            <option value="O">二等座</option>
+                                            <option value="M">一等座</option>
+                                            <option value="9">商务座</option>
+                                            <option value="P">特等座</option>
+                                            <option value="1">硬座</option>
+                                            <option value="2">软座</option>
+                                            <option value="4">软卧</option>
+                                            <option value="6">高级软卧</option>
+                                            <option value="WZ">无座</option>
                                         </select>
-                                        <select data-placeholder="证件类型" class="form-control ">
-                                            <option></option>
-                                            <option value="AL">Alabama</option>
-                                            <option value="WY">Wyoming</option>
+                                        <select data-placeholder="证件类型" style="width:110px;" class="form-control ">
+                                            <option value="1">二代身份证</option>
+                                            <option value="C">港澳通行证</option>
+                                            <option value="G">台湾通行证</option>
+                                            <option value="B">护照</option>
+                                            <option value="H">外国人居留证</option>
                                         </select>
                                         <input type="text" class="form-control input-sm" placeholder="证件号码">
+                                        <button type="button" class="btn btn-warning input-sm">
+                                            <span class="glyphicon glyphicon-remove"></span>
+                                        </button>
                                     </li>
                                     <li class="list-group-item p5">
                                         <input type="text" style="width:80px;" class="form-control input-sm" placeholder="乘客姓名">
-                                        <select data-placeholder="票种" class="form-control ">
-                                            <option></option>
-                                            <option value="AL">Alabama</option>
-                                            <option value="WY">Wyoming</option>
+                                        <select data-placeholder="票种" style="width:85px;" class="form-control ">
+                                            <option value="1">成人票</option>
+                                            <option value="2">小孩票</option>
+                                            <option value="3">学生票</option>
+                                            <option value="4">伤残军人票</option>
                                         </select>
-                                        <select data-placeholder="席别" class="form-control ">
-                                            <option></option>
-                                            <option value="AL">Alabama</option>
-                                            <option value="WY">Wyoming</option>
+                                        <select data-placeholder="席别" style="width:85px;" class="form-control ">
+                                            <option value="3">硬卧</option>
+                                            <option value="O">二等座</option>
+                                            <option value="M">一等座</option>
+                                            <option value="9">商务座</option>
+                                            <option value="P">特等座</option>
+                                            <option value="1">硬座</option>
+                                            <option value="2">软座</option>
+                                            <option value="4">软卧</option>
+                                            <option value="6">高级软卧</option>
+                                            <option value="WZ">无座</option>
                                         </select>
-                                        <select data-placeholder="证件类型" class="form-control ">
-                                            <option></option>
-                                            <option value="AL">Alabama</option>
-                                            <option value="WY">Wyoming</option>
+                                        <select data-placeholder="证件类型" style="width:110px;" class="form-control ">
+                                            <option value="1">二代身份证</option>
+                                            <option value="C">港澳通行证</option>
+                                            <option value="G">台湾通行证</option>
+                                            <option value="B">护照</option>
+                                            <option value="H">外国人居留证</option>
                                         </select>
                                         <input type="text" class="form-control input-sm" placeholder="证件号码">
+                                        <button type="button" class="btn btn-warning input-sm">
+                                            <span class="glyphicon glyphicon-remove"></span>
+                                        </button>
                                     </li>
                                 </ul>
                             </p>

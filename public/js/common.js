@@ -22,4 +22,29 @@ $(document).ready(function() {
 		language: "zh_CN",
 		allowClear: true
 	});
+
+
+	$("button.btn-warning").click(function() {
+		var o = $(this).prevAll();
+		$(o[0]).val("");
+		$(o[1]).val("1").trigger("change");
+		$(o[3]).val("3").trigger("change");
+		$(o[5]).val("1").trigger("change");
+		$(o[7]).val("");
+	});
+
+	$("#passenger").change(function() {
+		th = $(this);
+		if (th.val() !== "") {
+			for (var i = 1; i <= 5; i++) {
+
+				if ($("li.p" + i).children("input").first().val() == "") {
+					var o = $("li.p" + i).children();
+					$(o[0]).val(th.val());
+					$(o[7]).val(th.val() + th.val());
+					break;
+				}
+			};
+		}
+	});
 })
