@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="shortcut icon" href="/img/favicon.ico">
+
+    <link href="/css/bootstrap.min.css" rel="stylesheet" type="text/css">
+    <link href="/css/bootstrap-theme.min.css" rel="stylesheet" type="text/css">
+    <link href="/css/bootstrap-datetimepicker.min.css" rel="stylesheet" type="text/css">
+    <link href="/css/select2.css" rel="stylesheet" type="text/css">
+    <link href="/css/select2-bootstrap.css" rel="stylesheet" type="text/css">
+    <link href="/css/styles.css" rel="stylesheet" type="text/css">
+
+</head>
+
+<body>
+    <div class="container">
+        <div class="row">
+            <div class="col-xs-offset-2 col-sm-offset-2 col-xs-8 col-sm-8">
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <h3 class="panel-title">Panel title</h3>
+                    </div>
+                    <div class="panel-body">
+
+                        <form class="form-inline" role="form">
+                            <p>
+                                <div class="form-group">
+                                    <input type="text" class="form-control" id="start" placeholder="出发站" required>
+                                </div>
+                                <div class="form-group">
+                                    <input type="text" class="form-control" id="end" placeholder="终点站" required>
+                                </div>
+
+                                <div class="form-group">
+                                    <input type="text" class="form-control" id="train" placeholder="多个车次用逗号分割" required>
+                                </div>
+                            </p>
+                            <p>
+                                <div class="form-group">
+                                    <input type="text" class="form_datetime form-control" id="date" placeholder="乘车日期" required>
+                                </div>
+                                <div class="form-group">
+                                    <select id="passenger" data-placeholder="选择乘车人" class="form-control " required>
+                                        <option></option>
+                                        <option value="AL">Alabama</option>
+                                        <option value="WY">Wyoming</option>
+                                    </select>
+                                </div>
+                                <button type="submit" class="btn btn-default">查询</button>
+                            </p>
+                            <p>
+                                <ul class="list-group">
+                                    <li class="list-group-item p1">
+                                        <input type="text" style="width:80px;" class="form-control input-sm" id="start" placeholder="乘客姓名" required>
+                                        <select data-placeholder="票种" class="form-control " required>
+                                            <option></option>
+                                            <option value="AL">Alabama</option>
+                                            <option value="WY">Wyoming</option>
+                                        </select>
+                                        <select data-placeholder="席别" class="form-control " required>
+                                            <option></option>
+                                            <option value="AL">Alabama</option>
+                                            <option value="WY">Wyoming</option>
+                                        </select>
+                                        <select data-placeholder="证件类型" class="form-control " required>
+                                            <option></option>
+                                            <option value="AL">Alabama</option>
+                                            <option value="WY">Wyoming</option>
+                                        </select>
+                                        <input type="text" class="form-control input-sm" placeholder="证件号码" required>
+                                    </li>
+                                    <li class="list-group-item p2">
+                                        <input type="text" style="width:80px;" class="form-control input-sm" placeholder="乘客姓名">
+                                        <select data-placeholder="票种" class="form-control ">
+                                            <option></option>
+                                            <option value="AL">Alabama</option>
+                                            <option value="WY">Wyoming</option>
+                                        </select>
+                                        <select data-placeholder="席别" class="form-control ">
+                                            <option></option>
+                                            <option value="AL">Alabama</option>
+                                            <option value="WY">Wyoming</option>
+                                        </select>
+                                        <select data-placeholder="证件类型" class="form-control ">
+                                            <option></option>
+                                            <option value="AL">Alabama</option>
+                                            <option value="WY">Wyoming</option>
+                                        </select>
+                                        <input type="text" class="form-control input-sm" placeholder="证件号码">
+                                    </li>
+                                    <li class="list-group-item p3">
+                                        <input type="text" style="width:80px;" class="form-control input-sm" placeholder="乘客姓名">
+                                        <select data-placeholder="票种" class="form-control ">
+                                            <option></option>
+                                            <option value="AL">Alabama</option>
+                                            <option value="WY">Wyoming</option>
+                                        </select>
+                                        <select data-placeholder="席别" class="form-control ">
+                                            <option></option>
+                                            <option value="AL">Alabama</option>
+                                            <option value="WY">Wyoming</option>
+                                        </select>
+                                        <select data-placeholder="证件类型" class="form-control ">
+                                            <option></option>
+                                            <option value="AL">Alabama</option>
+                                            <option value="WY">Wyoming</option>
+                                        </select>
+                                        <input type="text" class="form-control input-sm" placeholder="证件号码">
+                                    </li>
+                                    <li class="list-group-item p4">
+                                        <input type="text" style="width:80px;" class="form-control input-sm" placeholder="乘客姓名">
+                                        <select data-placeholder="票种" class="form-control ">
+                                            <option></option>
+                                            <option value="AL">Alabama</option>
+                                            <option value="WY">Wyoming</option>
+                                        </select>
+                                        <select data-placeholder="席别" class="form-control ">
+                                            <option></option>
+                                            <option value="AL">Alabama</option>
+                                            <option value="WY">Wyoming</option>
+                                        </select>
+                                        <select data-placeholder="证件类型" class="form-control ">
+                                            <option></option>
+                                            <option value="AL">Alabama</option>
+                                            <option value="WY">Wyoming</option>
+                                        </select>
+                                        <input type="text" class="form-control input-sm" placeholder="证件号码">
+                                    </li>
+                                    <li class="list-group-item p5">
+                                        <input type="text" style="width:80px;" class="form-control input-sm" placeholder="乘客姓名">
+                                        <select data-placeholder="票种" class="form-control ">
+                                            <option></option>
+                                            <option value="AL">Alabama</option>
+                                            <option value="WY">Wyoming</option>
+                                        </select>
+                                        <select data-placeholder="席别" class="form-control ">
+                                            <option></option>
+                                            <option value="AL">Alabama</option>
+                                            <option value="WY">Wyoming</option>
+                                        </select>
+                                        <select data-placeholder="证件类型" class="form-control ">
+                                            <option></option>
+                                            <option value="AL">Alabama</option>
+                                            <option value="WY">Wyoming</option>
+                                        </select>
+                                        <input type="text" class="form-control input-sm" placeholder="证件号码">
+                                    </li>
+                                </ul>
+                            </p>
+
+                        </form>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <!-- /container -->
+
+    <script src="/js/jquery-1.11.1.min.js"></script>
+    <script src="/js/bootstrap.min.js"></script>
+    <script src="/js/bootstrap-datetimepicker.min.js"></script>
+    <script src="/js/bootstrap-datetimepicker.zh-CN.js"></script>
+    <script src="/js/select2.min.js"></script>
+    <script src="/js/select2_locale_zh-CN.js"></script>
+    <script src="/js/common.js"></script>
+</body>
+
+</html>

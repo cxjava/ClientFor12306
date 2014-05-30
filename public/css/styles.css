@@ -1,14 +1,17 @@
 body {
-    padding-top: 40px;
-    padding-bottom: 40px;
     background-color: #eee;
+    margin-top: 10px;
 }
-.form-login {
-    max-width: 230px;
-    padding: 15px;
-    margin: 0 auto;
+.dialog {
+    position:absolute;
+    left:50%;
+    top:50%;
+    width:330px;
+    height: 250px;
+    margin-left:-165px;
+    margin-top: -125px;
 }
-.code img {
+#img {
     display: block;
     width: 78px;
     height: 38px;

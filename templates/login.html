@@ -16,19 +16,49 @@
 
 <body>
     <div class="container">
-        <form class="form-login" role="form">
-            <input type="text" class="form-control" id="username" value="" placeholder="用户名" required autofocus>
-            <input type="password" class="form-control" id="password" value="" placeholder="密　码" required>
-            <input type="text" class="form-control" id="code" value="" placeholder="验证码" required>
-            <span class="code" >
-                <img src="/loginPassCodeNew/" id="img" title="单击刷新验证码">
-            </span>
-            <label class="checkbox">
-                <input type="checkbox" value="remember-me">记住我
-            </label>
-            <button class="btn btn-primary btn-block" type="submit">登录</button>
-        </form>
-
+        <div class="row">
+            <div class="dialog">
+                <form class="form-horizontal" role="form" action="/login" method="post">
+                    <div class="form-group">
+                        <label for="username" class="col-xs-3 col-sm-3 control-label">用户名</label>
+                        <div class="input-group col-xs-7 col-sm-7">
+                            <span class="input-group-addon">
+                                <span class="glyphicon glyphicon-user"></span>
+                            </span>
+                            <input type="text" class="form-control" id="username" name="username" placeholder="用户名" required autofocus>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="password" class="col-xs-3 col-sm-3 control-label">密　码</label>
+                        <div class="input-group col-xs-7 col-sm-7">
+                            <span class="input-group-addon">
+                                <span class="glyphicon glyphicon-eye-close"></span>
+                            </span>
+                            <input type="password" class="form-control" id="password" name="password" placeholder="密　码" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="code" class="col-xs-3 col-sm-3 control-label">验证码</label>
+                        <div class="input-group col-xs-7 col-sm-7">
+                            <span class="input-group-addon">
+                                <span class="glyphicon glyphicon-picture"></span>
+                            </span>
+                            <input type="text" class="form-control" id="code" name="code" placeholder="验证码" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="input-group col-xs-offset-3 col-sm-offset-3 col-xs-7 col-sm-7">
+                            <img src="/loginPassCodeNew/" id="img" title="单击刷新验证码">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="input-group col-xs-offset-3 col-sm-offset-3 col-xs-7 col-sm-7">
+                            <button type="submit" class="btn btn-default">登陆</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
     <!-- /container -->
 

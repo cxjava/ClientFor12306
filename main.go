@@ -3,54 +3,50 @@ package main
 import (
 	"crypto/tls"
 	"fmt"
-	"image"
-	"image/jpeg"
 	"io/ioutil"
-	"log"
 	"net"
 	"net/http"
-	"os"
+	"net/url"
 	"time"
 
 	"github.com/go-martini/martini"
+	"github.com/martini-contrib/binding"
 	"github.com/martini-contrib/render"
-	"github.com/nfnt/resize"
 )
 
 var (
-	client = &http.Client{
-		Transport: &http.Transport{
-			// Proxy:           http.ProxyURL(pr),
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client = &http.Client{}
 )
 
-func TimeoutDialer(cTimeout time.Duration, rwTimeout time.Duration) func(net, addr string) (c net.Conn, err error) {
-	return func(netw, addr string) (net.Conn, error) {
-		// conn, err := net.DialTimeout(netw, addr, cTimeout)
-		fmt.Println(netw)
-		fmt.Println(addr)
-		conn, err := tls.Dial(netw, addr, &tls.Config{
-			InsecureSkipVerify: true,
-		})
-		if err != nil {
-			fmt.Println("ccc", err)
-			return nil, err
-		}
-		//conn.SetDeadline(time.Now().Add(rwTimeout))
-		return conn, nil
+func init() {
+	pr, err := url.Parse(Conf.ProxyUrl)
+	if err != nil {
+		Error(err)
+		return
 	}
-}
-
-func NewTimeoutClient(connectTimeout time.Duration, readWriteTimeout time.Duration) *http.Client {
-
-	return &http.Client{
+	client = &http.Client{
 		Transport: &http.Transport{
-			//	TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-			Dial: TimeoutDialer(connectTimeout, readWriteTimeout),
+			Proxy:           http.ProxyURL(pr),
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			Dial: func(network, addr string) (net.Conn, error) {
+				deadline := time.Now().Add(10 * time.Second)
+				c, err := net.DialTimeout(network, addr, 10*time.Second)
+				// c, err := net.DialTimeout(network, Conf.CDN[0]+":443", 10*time.Second)
+				if err != nil {
+					return nil, err
+				}
+				c.SetDeadline(deadline)
+				return c, nil
+			},
 		},
 	}
+
+}
+
+type UserLoginForm struct {
+	Username string `form:"username" binding:"required"`
+	Password string `form:"password" binding:"required"`
+	Code     string `form:"code" binding:"required"`
 }
 
 func main() {
@@ -68,34 +64,14 @@ func main() {
 	}))
 
 	m.Get("/", func(r render.Render) {
-		r.HTML(200, "login", "jeremy")
+		r.HTML(200, "login", nil)
 	})
 
-	m.Get("/loginPassCodeNew1", func(res http.ResponseWriter, req *http.Request) { // res and req are injected by Martini
-		res.Header().Add("key", "value")
-		res.Header().Set("Content-Type", "image/jpeg")
-		res.WriteHeader(200) // HTTP 200
-	})
 	m.Get("/loginPassCodeNew/**", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
-		res.Header().Set("Content-Type", "image/jpeg")
-		// client = NewTimeoutClient(20*time.Second, 20*time.Second)
-		c := http.Client{
-			Transport: &http.Transport{
-				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-				Dial: func(netw, addr string) (net.Conn, error) {
-					deadline := time.Now().Add(10 * time.Second)
-					c, err := net.DialTimeout(netw, Conf.CDN[0]+":443", time.Second*10)
-					if err != nil {
-						return nil, err
-					}
-					c.SetDeadline(deadline)
-					return c, nil
-				},
-			},
-		}
-		rsp, err := c.Get(URLLoginPassCode + "&" + params["_1"])
+
+		rsp, err := client.Get(URLLoginPassCode + "&" + params["_1"])
 		if err != nil {
-			fmt.Println("aaa", err)
+			fmt.Println("client.Get:", err)
 			return
 		}
 		defer rsp.Body.Close()
@@ -103,12 +79,12 @@ func main() {
 		bodyByte, err := ioutil.ReadAll(rsp.Body)
 		if err != nil {
 			Error("ioutil.ReadAll:", err)
+			return
 		}
-
+		res.Header().Set("Content-Type", "image/jpeg")
 		res.Write(bodyByte)
-		res.WriteHeader(200)
-
 	})
+	m.Post("/login", binding.Form(UserLoginForm{}), LoginForm)
 	// nodeWebkit, err := nw.New()
 	// if err != nil {
 	// 	panic(err)
@@ -124,19 +100,10 @@ func main() {
 	Info("c")
 	// log.Fatal(http.ListenAndServe(":8080", m))
 }
-func thumb() image.Image {
-	file, err := os.Open("test.jpg")
-	if err != nil {
-		log.Fatal(err)
-	}
 
-	img, err := jpeg.Decode(file)
-	if err != nil {
-		log.Fatal(err)
-	}
-	file.Close()
-
-	m := resize.Resize(0, 200, img, resize.MitchellNetravali)
-
-	return m
+func LoginForm(res http.ResponseWriter, req *http.Request, params martini.Params, r render.Render, l UserLoginForm) {
+	fmt.Println(l.Username)
+	fmt.Println(l.Password)
+	fmt.Println(l.Code)
+	r.HTML(200, "main", nil)
 }
