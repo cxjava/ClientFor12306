@@ -12,13 +12,13 @@ func TestAddRequestHeader(t *testing.T) {
 		t.Fatal("error:", err)
 		return
 	}
-	AddReqestHeader(req, "GET")
+	AddReqestHeader(req, "GET", nil)
 	if req.Header.Get("Host") != "kyfw.12306.cn" {
 		t.Fatal("AddReqestHeader failed!")
 	}
 
-	AddReqestHeader(req, "POST")
-	if req.Header.Get("Content-Type") != "application/x-www-form-urlencoded; charset=UTF-8" {
+	AddReqestHeader(req, "POST", nil)
+	if req.Header.Get("Content-Type") != "application/x-www-form-urlencoded" {
 		t.Fatal("AddReqestHeader for Content-Type failed!")
 	}
 }
