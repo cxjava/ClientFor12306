@@ -36,9 +36,15 @@ $(document).ready(function() {
 		th = $(this);
 		if (th.val() !== "") {
 			for (var i = 1; i <= 5; i++) {
-				if ($("li.p" + i).children("input").first().val() == "") {
-					var v = passenger[th.val()]
+				var v = passenger[th.val()]
+				vals = $("li.p" + i).children("input").first().val();
+				if (vals == v.passenger_name) {
+					break;
+				}
+				if (vals == "") {
 					var o = $("li.p" + i).children();
+					console.log($(o[0]).val());
+
 					$(o[0]).val(v.passenger_name);
 					$(o[2]).val(v.passenger_type).trigger("change");
 					$(o[4]).val("3").trigger("change");
