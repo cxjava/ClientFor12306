@@ -2,8 +2,11 @@ package main
 
 import (
 	"encoding/json"
+	"io/ioutil"
+	"net/http"
 	"net/url"
 	"strings"
+	"time"
 )
 
 type Login struct {
@@ -30,17 +33,49 @@ type LoginAysnSuggest struct {
 	ValidateMessages interface{} `json:"validateMessages,omitempty"`
 }
 
-func CheckRandCodeAnsyn(randCode, cdn string) (r bool, msg []string) {
+//获取新的cookie
+func (l *Login) setNewCookie() error {
+	if l.Cookie != "" {
+		return nil
+	}
+	req, err := http.NewRequest("GET", URLLoginJs, nil)
+	if err != nil {
+		Error("setNewCookie http.NewRequest error:", err)
+		return err
+	}
+
+	h := map[string]string{"Referer": "https://kyfw.12306.cn/otn/login/init"}
+	AddReqestHeader(req, "GET", h)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		Error("setNewCookie client.Do error:", err)
+		return err
+	}
+	defer resp.Body.Close()
+
+	l.Cookie = GetCookieFromRespHeader(resp)
+	Info("Cookie=" + l.Cookie + "=")
+	bodyByte, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		Error("ioutil.ReadAll:", err)
+		return err
+	}
+	Info(string(bodyByte))
+	return nil
+}
+
+func (l *Login) CheckRandCodeAnsyn() (r bool, msg []string) {
 	b := url.Values{}
-	b.Add("randCode", randCode)
+	b.Add("randCode", l.Captcha)
 	b.Add("rand", Rand)
 	params, err := url.QueryUnescape(b.Encode())
 	if err != nil {
 		Error("CheckRandCodeAnsyn url.QueryUnescape error:", err)
 		return false, []string{err.Error()}
 	}
-	Info(params)
-	content, err := DoForWardRequest(cdn, "POST", URLCheckRandCodeAnsyn, strings.NewReader(params))
+	Info("CheckRandCodeAnsyn params:", params)
+	content, err := DoForWardRequest(login.CDN, "POST", URLCheckRandCodeAnsyn, strings.NewReader(params))
 	if err != nil {
 		Error("CheckRandCodeAnsyn DoForWardRequest error:", err)
 		return false, []string{err.Error()}
@@ -55,7 +90,18 @@ func CheckRandCodeAnsyn(randCode, cdn string) (r bool, msg []string) {
 	return crc.Data == "Y", crc.Messages
 }
 
-func (l *Login) Login(cdn string) (r bool, msg []string) {
+func (l *Login) checkUser() (bool, error) {
+	h := map[string]string{"Referer": "https://kyfw.12306.cn/otn/leftTicket/init"}
+	body, err := DoForWardRequestHeader(l.CDN, "POST", URLCheckUser, nil, h)
+	if err != nil {
+		Error("checkUser DoForWardRequest error:", err)
+		return false, err
+	}
+	Info("checkUser body:", body)
+	return strings.Contains(body, `"flag":true`), nil
+}
+
+func (l *Login) loginAysnSuggest() (r bool, msg []string) {
 	b := url.Values{}
 	b.Add("loginUserDTO.user_name", l.Username)
 	b.Add("userDTO.password", l.Password)
@@ -65,7 +111,8 @@ func (l *Login) Login(cdn string) (r bool, msg []string) {
 		Error("Login url.QueryUnescape error:", err)
 		return false, []string{err.Error()}
 	}
-	content, err := DoForWardRequest(cdn, "POST", URLLoginAysnSuggest, strings.NewReader(params))
+	h := map[string]string{"Referer": "https://kyfw.12306.cn/otn/login/init"}
+	content, err := DoForWardRequestHeader(l.CDN, "POST", URLLoginAysnSuggest, strings.NewReader(params), h)
 	if err != nil {
 		Error("CheckRandCodeAnsyn DoForWardRequest error:", err)
 		return false, []string{err.Error()}
@@ -87,9 +134,52 @@ func (l *Login) userLogin() {
 	params, _ := url.QueryUnescape(val.Encode())
 	Info("userLogin params:", params)
 	h := map[string]string{"Referer": "https://kyfw.12306.cn/otn/login/init"}
-	body, err := DoForWardRequestHeader(Conf.CDN[0], "POST", URLUserLogin, strings.NewReader(params), h)
+	body, err := DoForWardRequestHeader(l.CDN, "POST", URLUserLogin, strings.NewReader(params), h)
 	if err != nil {
 		Error("userLogin DoForWardRequest error:", err)
 	}
-	Debug("userLogin body:", body)
+	Info("userLogin body:", body)
+}
+
+//获取联系人
+func (l *Login) getPassengerDTO() (p PassengerDTO) {
+	val := url.Values{}
+	params, _ := url.QueryUnescape(val.Encode())
+	Info("getPassengerDTO params:", params)
+	h := map[string]string{"Referer": "https://kyfw.12306.cn/otn/leftTicket/init"}
+	body, err := DoForWardRequestHeader(l.CDN, "POST", URLGetPassengerDTOs, strings.NewReader(params), h)
+	if err != nil {
+		Error("getPassengerDTO DoForWardRequest error:", err)
+		return
+	}
+	Info("getPassengerDTO body:", body)
+	if !strings.Contains(body, "passenger_name") {
+		Error("获取联系人出错!!!!!!返回:", body)
+		return
+	}
+	p = PassengerDTO{}
+	if err := json.Unmarshal([]byte(body), &p); err != nil {
+		Error("getPassengerDTO", l.CDN, err)
+		return
+	}
+	return
+}
+
+func (l *Login) initQueryUserInfo() {
+	time.Sleep(time.Second * 5)
+	h := map[string]string{"Referer": "https://kyfw.12306.cn/otn/leftTicket/init"}
+	body, err := DoForWardRequestHeader(l.CDN, "GET", URLInitQueryUserInfo, nil, h)
+	if err != nil {
+		Error("initQueryUserInfo DoForWardRequest error:", err)
+	}
+	Info("initQueryUserInfo body:", body)
+}
+
+func (l *Login) leftTicketInit() {
+	h := map[string]string{"Referer": "https://kyfw.12306.cn/otn/index/init"}
+	body, err := DoForWardRequestHeader(l.CDN, "GET", URLInit, nil, h)
+	if err != nil {
+		Error("initQueryUserInfo DoForWardRequest error:", err)
+	}
+	Info("initQueryUserInfo body:", body)
 }

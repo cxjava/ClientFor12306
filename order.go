@@ -187,14 +187,11 @@ func (order *Order) getPassCodeNew() error {
 		Error("getPassCodeNew image.Decode:", err)
 		return err
 	}
-	Im, err := walk.NewBitmapFromImage(img)
+	e, err := walk.NewBitmapFromImage(img)
 	if err != nil {
-		Error("getPassCodeNew walk.NewBitmapFromImage:", err)
+		Error("getPassCodeNew walk.NewBitmapFromImage:", err, e)
 		return err
 	}
-	submitCaptchaImage.SetImage(Im)
-	submitCaptchaEdit.SetText("")
-	submitCaptchaEdit.SetFocus()
 	return nil
 }
 

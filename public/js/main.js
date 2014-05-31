@@ -23,7 +23,6 @@ $(document).ready(function() {
 		allowClear: true
 	});
 
-
 	$("button.btn-warning").click(function() {
 		var o = $(this).prevAll();
 		$(o[0]).val("");
@@ -37,14 +36,31 @@ $(document).ready(function() {
 		th = $(this);
 		if (th.val() !== "") {
 			for (var i = 1; i <= 5; i++) {
-
 				if ($("li.p" + i).children("input").first().val() == "") {
+					var v = passenger[th.val()]
 					var o = $("li.p" + i).children();
-					$(o[0]).val(th.val());
-					$(o[7]).val(th.val() + th.val());
+					$(o[0]).val(v.passenger_name);
+					$(o[2]).val(v.passenger_type).trigger("change");
+					$(o[4]).val("3").trigger("change");
+					$(o[6]).val(v.passenger_id_type_code).trigger("change");
+					$(o[7]).val(v.passenger_id_no);
 					break;
 				}
 			};
 		}
 	});
+
+	$.post('/loadUser', function(data, textStatus, xhr) {
+		if (data.r == true) {
+			var p = data.o,
+				str = "<option></option>";
+			passenger = {}
+			for (var i = 0; i < p.length; i++) {
+				passenger[p[i].passenger_id_no] = p[i];
+				str = str + '<option value="' + p[i].passenger_id_no + '">' + p[i].passenger_name + '</option>'
+			};
+			$('#passenger').html(str).trigger('change')
+		}
+	});
+
 })

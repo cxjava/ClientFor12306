@@ -26,6 +26,5 @@ func ReadConfig() error {
 		return err
 	}
 
-	PrepareClient()
 	return nil
 }

@@ -19,26 +19,29 @@ var (
 )
 
 func init() {
-	pr, err := url.Parse(Conf.ProxyUrl)
-	if err != nil {
-		Error(err)
-		return
+	t := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		Dial: func(network, addr string) (net.Conn, error) {
+			deadline := time.Now().Add(10 * time.Second)
+			c, err := net.DialTimeout(network, addr, 10*time.Second)
+			// c, err := net.DialTimeout(network, Conf.CDN[0]+":443", 10*time.Second)
+			if err != nil {
+				return nil, err
+			}
+			c.SetDeadline(deadline)
+			return c, nil
+		},
+	}
+	if Conf.Proxy {
+		pr, err := url.Parse(Conf.ProxyUrl)
+		if err != nil {
+			Error(err)
+			return
+		}
+		t.Proxy = http.ProxyURL(pr)
 	}
 	client = &http.Client{
-		Transport: &http.Transport{
-			Proxy:           http.ProxyURL(pr),
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-			Dial: func(network, addr string) (net.Conn, error) {
-				deadline := time.Now().Add(10 * time.Second)
-				c, err := net.DialTimeout(network, addr, 10*time.Second)
-				// c, err := net.DialTimeout(network, Conf.CDN[0]+":443", 10*time.Second)
-				if err != nil {
-					return nil, err
-				}
-				c.SetDeadline(deadline)
-				return c, nil
-			},
-		},
+		Transport: t,
 	}
 
 }
@@ -67,24 +70,9 @@ func main() {
 		r.HTML(200, "login", nil)
 	})
 
-	m.Get("/loginPassCodeNew/**", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
-
-		rsp, err := client.Get(URLLoginPassCode + "&" + params["_1"])
-		if err != nil {
-			fmt.Println("client.Get:", err)
-			return
-		}
-		defer rsp.Body.Close()
-
-		bodyByte, err := ioutil.ReadAll(rsp.Body)
-		if err != nil {
-			Error("ioutil.ReadAll:", err)
-			return
-		}
-		res.Header().Set("Content-Type", "image/jpeg")
-		res.Write(bodyByte)
-	})
+	m.Get("/loginPassCodeNew/**", loginPassCodeNewfunc)
 	m.Post("/login", binding.Form(UserLoginForm{}), LoginForm)
+	m.Post("/loadUser", loadUser)
 	// nodeWebkit, err := nw.New()
 	// if err != nil {
 	// 	panic(err)
@@ -100,10 +88,57 @@ func main() {
 	Info("c")
 	// log.Fatal(http.ListenAndServe(":8080", m))
 }
+func loginPassCodeNewfunc(res http.ResponseWriter, req *http.Request, params martini.Params) {
+	login.setNewCookie()
 
+	req, err := http.NewRequest("GET", URLLoginPassCode+"&"+params["_1"], nil)
+	if err != nil {
+		Error("setNewCookie http.NewRequest error:", err)
+		return
+	}
+
+	h := map[string]string{"Referer": "https://kyfw.12306.cn/otn/leftTicket/init"}
+	AddReqestHeader(req, "GET", h)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		Error("setNewCookie client.Do error:", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	bodyByte, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		Error("ioutil.ReadAll:", err)
+		return
+	}
+	res.Header().Set("Content-Type", "image/jpeg")
+	res.Write(bodyByte)
+}
 func LoginForm(res http.ResponseWriter, req *http.Request, params martini.Params, r render.Render, l UserLoginForm) {
 	fmt.Println(l.Username)
 	fmt.Println(l.Password)
 	fmt.Println(l.Code)
+	login.Username = l.Username
+	login.Password = l.Password
+	login.Captcha = l.Code
+
+	if result, msg := login.loginAysnSuggest(); !result {
+		r.HTML(200, "login", map[string]interface{}{"r": !result, "msg": msg, "username": l.Username, "password": l.Password})
+		return
+	}
+	login.checkUser()
+	login.userLogin()
+	go login.initQueryUserInfo()
 	r.HTML(200, "main", nil)
+}
+func loadUser(res http.ResponseWriter, req *http.Request, params martini.Params, r render.Render) {
+	if b, err := login.checkUser(); !b {
+		r.JSON(200, map[string]interface{}{"r": b, "o": err})
+		return
+	}
+	login.leftTicketInit()
+	login.userLogin()
+	passenger := login.getPassengerDTO()
+	r.JSON(200, map[string]interface{}{"r": true, "o": passenger.Data.NormalPassengers})
 }

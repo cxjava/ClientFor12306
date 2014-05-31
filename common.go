@@ -17,7 +17,6 @@ import (
 
 var (
 	passenger = &PassengerDTO{}
-	Client    = &http.Client{}
 )
 
 //获取联系人
@@ -55,33 +54,6 @@ func dyLoginJs(cdn string) error {
 		return err
 	}
 	Debug("dyLoginJs body:", body)
-	return nil
-}
-
-//获取新的cookie
-func setNewCookie(cdn string) error {
-	req, err := http.NewRequest("GET", URLLoginJs, nil)
-	if err != nil {
-		Error("setNewCookie http.NewRequest error:", err)
-		return nil
-	}
-
-	con, err := NewForwardClientConn(cdn, req.URL.Scheme)
-	if err != nil {
-		Error("setNewCookie newForwardClientConn error:", err)
-		return nil
-	}
-	defer con.Close()
-	resp, err := con.Do(req)
-	if err != nil {
-		Error("setNewCookie con.Do error:", err)
-		return nil
-	}
-	defer resp.Body.Close()
-
-	login.Cookie = GetCookieFromRespHeader(resp)
-	Info("==" + login.Cookie + "==")
-
 	return nil
 }
 
@@ -182,25 +154,6 @@ func DoForWardRequest(cdn, method, requestUrl string, body io.Reader) (string, e
 	return DoForWardRequestHeader(cdn, method, requestUrl, body, nil)
 }
 
-func PrepareClient() {
-	Client = &http.Client{
-		Transport: &http.Transport{
-			Dial: func(netw, addr string) (net.Conn, error) {
-				// deadline := time.Now().Add(25 * time.Second)
-				// c, err := net.DialTimeout(netw, addr, time.Second*20)
-				c, err := tls.Dial("tcp", Conf.CDN[0]+":443", &tls.Config{
-					InsecureSkipVerify: true,
-				})
-				if err != nil {
-					return nil, err
-				}
-				// c.SetDeadline(deadline)
-				return c, nil
-			},
-		},
-	}
-}
-
 func DoForWardRequestHeader(cdn, method, requestUrl string, body io.Reader, customHeader map[string]string) (string, error) {
 	req, err := http.NewRequest(method, requestUrl, body)
 	if err != nil {
@@ -209,14 +162,7 @@ func DoForWardRequestHeader(cdn, method, requestUrl string, body io.Reader, cust
 	}
 	AddReqestHeader(req, method, customHeader)
 
-	// con, err := NewForwardClientConn(cdn, req.URL.Scheme)
-	// if err != nil {
-	// 	Error("DoForWardRequest newForwardClientConn error:", err)
-	// 	return "", err
-	// }
-	// defer con.Close()
-	// resp, err := con.Do(req)
-	resp, err := Client.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		Error("DoForWardRequest con.Do error:", err)
 		return "", err
@@ -238,13 +184,11 @@ func DoForWardRequestHeader(cdn, method, requestUrl string, body io.Reader, cust
 //添加头
 func AddReqestHeader(request *http.Request, method string, customHeader map[string]string) {
 	// request.Header.Set("Connection", "Keep-Alive")
-	request.Header.Set("Host", "kyfw.12306.cn")
-	request.Header.Set("Accept-Encoding", "gzip,deflate")
 	request.Header.Set("Accept-Language", "zh-CN")
 	request.Header.Set("Accept", "*/*")
-	request.Header.Set("X-Requested-With", "XMLHttpRequest")
-	request.Header.Set("Referer", "https://kyfw.12306.cn/otn/confirmPassenger/initDc")
 	request.Header.Set("User-Agent", UserAgent)
+	request.Header.Set("Accept-Encoding", "gzip,deflate")
+	request.Header.Set("Host", "kyfw.12306.cn")
 	if login.Cookie != "" {
 		request.Header.Set("Cookie", login.Cookie)
 	}
