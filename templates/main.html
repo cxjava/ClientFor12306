@@ -29,43 +29,42 @@
                         <form class="form-inline" role="form">
                             <p>
                                 <div class="form-group">
-                                    <input type="text" class="form-control" id="start" placeholder="出发站" required autofocus>
+                                    <input type="text" class="form-control" name="start" placeholder="出发站" required autofocus>
                                 </div>
                                 <div class="form-group">
-                                    <input type="text" class="form-control" id="end" placeholder="终点站" required>
+                                    <input type="text" class="form-control" name="end" placeholder="终点站" required>
                                 </div>
 
                                 <div class="form-group">
-                                    <input type="text" class="form-control" id="train" placeholder="多个车次用逗号分割" required>
+                                    <input type="text" class="form-control" name="train" placeholder="多个车次用逗号分割" required>
                                 </div>
                             </p>
                             <p>
                                 <div class="form-group">
-                                    <input type="text" class="form_datetime form-control" id="date" placeholder="乘车日期" required>
+                                    <input type="text" class="form_datetime form-control" name="date" placeholder="乘车日期" required>
                                 </div>
                                 <div class="form-group">
                                     <select id="passenger" data-placeholder="选择乘车人" style="width:110px;" class="form-control " required>
                                         <option></option>
                                     </select>
                                 </div>&nbsp;&nbsp;
-                                <button type="submit" class="btn btn-info">查询</button>
+                                <button type="submit" class="btn btn-info" id="submit">查询</button>
                                 &nbsp;&nbsp;
-                                <input type="text" style="width:80px;" class="form-control" id="code" name="code" placeholder="验证码" required>
-                                <div class="form-group">
-                                    <!-- <img src="/loginPassCodeNew/" id="img" title="单击刷新验证码"> -->
+                                <input type="text" style="width:80px;" maxlength="4" class="form-control" id="code" placeholder="验证码">
+                                <div class="form-group" id="imageDiv">
                                 </div>
                             </p>
                             <p>
                                 <ul class="list-group">
                                     <li class="list-group-item p1">
-                                        <input type="text" style="width:80px;" class="form-control input-sm" placeholder="乘客姓名" required>
-                                        <select data-placeholder="票种" style="width:85px;" class="form-control " required>
+                                        <input type="text" style="width:80px;" class="form-control input-sm" placeholder="乘客姓名" name="passengerName1" required>
+                                        <select data-placeholder="票种" name="ticketType1"  style="width:85px;" class="form-control " required>
                                             <option value="1">成人票</option>
                                             <option value="2">小孩票</option>
                                             <option value="3">学生票</option>
                                             <option value="4">伤残军人票</option>
                                         </select>
-                                        <select data-placeholder="席别" style="width:85px;" class="form-control " required>
+                                        <select data-placeholder="席别" name="seatType1"  style="width:85px;" class="form-control " required>
                                             <option value="3">硬卧</option>
                                             <option value="O">二等座</option>
                                             <option value="M">一等座</option>
@@ -77,27 +76,27 @@
                                             <option value="6">高级软卧</option>
                                             <option value="WZ">无座</option>
                                         </select>
-                                        <select data-placeholder="证件类型" style="width:110px;" class="form-control " required>
+                                        <select data-placeholder="证件类型" name="IDType1" style="width:110px;" class="form-control " required>
                                             <option value="1">二代身份证</option>
                                             <option value="C">港澳通行证</option>
                                             <option value="G">台湾通行证</option>
                                             <option value="B">护照</option>
                                             <option value="H">外国人居留证</option>
                                         </select>
-                                        <input type="text" class="form-control input-sm" placeholder="证件号码" required>
+                                        <input type="text" class="form-control input-sm" placeholder="证件号码" name="IDNumber1" required>
                                         <button type="button" class="btn btn-warning input-sm">
                                             <span class="glyphicon glyphicon-remove"></span>
                                         </button>
                                     </li>
                                     <li class="list-group-item p2">
-                                        <input type="text" style="width:80px;" class="form-control input-sm" placeholder="乘客姓名">
-                                        <select data-placeholder="票种" style="width:85px;" class="form-control ">
+                                        <input type="text" style="width:80px;" class="form-control input-sm" placeholder="乘客姓名" name="passengerName2">
+                                        <select data-placeholder="票种" name="ticketType2"  style="width:85px;" class="form-control ">
                                             <option value="1">成人票</option>
                                             <option value="2">小孩票</option>
                                             <option value="3">学生票</option>
                                             <option value="4">伤残军人票</option>
                                         </select>
-                                        <select data-placeholder="席别" style="width:85px;" class="form-control ">
+                                        <select data-placeholder="席别" name="seatType2"  style="width:85px;" class="form-control ">
                                             <option value="3">硬卧</option>
                                             <option value="O">二等座</option>
                                             <option value="M">一等座</option>
@@ -109,27 +108,27 @@
                                             <option value="6">高级软卧</option>
                                             <option value="WZ">无座</option>
                                         </select>
-                                        <select data-placeholder="证件类型" style="width:110px;" class="form-control ">
+                                        <select data-placeholder="证件类型" name="IDType2" style="width:110px;" class="form-control ">
                                             <option value="1">二代身份证</option>
                                             <option value="C">港澳通行证</option>
                                             <option value="G">台湾通行证</option>
                                             <option value="B">护照</option>
                                             <option value="H">外国人居留证</option>
                                         </select>
-                                        <input type="text" class="form-control input-sm" placeholder="证件号码">
+                                        <input type="text" class="form-control input-sm" placeholder="证件号码" name="IDNumber2">
                                         <button type="button" class="btn btn-warning input-sm">
                                             <span class="glyphicon glyphicon-remove"></span>
                                         </button>
                                     </li>
                                     <li class="list-group-item p3">
-                                        <input type="text" style="width:80px;" class="form-control input-sm" placeholder="乘客姓名">
-                                        <select data-placeholder="票种" style="width:85px;" class="form-control ">
+                                        <input type="text" style="width:80px;" class="form-control input-sm" placeholder="乘客姓名" name="passengerName3">
+                                        <select data-placeholder="票种" name="ticketType3"  style="width:85px;" class="form-control ">
                                             <option value="1">成人票</option>
                                             <option value="2">小孩票</option>
                                             <option value="3">学生票</option>
                                             <option value="4">伤残军人票</option>
                                         </select>
-                                        <select data-placeholder="席别" style="width:85px;" class="form-control ">
+                                        <select data-placeholder="席别" name="seatType3"  style="width:85px;" class="form-control ">
                                             <option value="3">硬卧</option>
                                             <option value="O">二等座</option>
                                             <option value="M">一等座</option>
@@ -141,27 +140,27 @@
                                             <option value="6">高级软卧</option>
                                             <option value="WZ">无座</option>
                                         </select>
-                                        <select data-placeholder="证件类型" style="width:110px;" class="form-control ">
+                                        <select data-placeholder="证件类型" name="IDType3" style="width:110px;" class="form-control ">
                                             <option value="1">二代身份证</option>
                                             <option value="C">港澳通行证</option>
                                             <option value="G">台湾通行证</option>
                                             <option value="B">护照</option>
                                             <option value="H">外国人居留证</option>
                                         </select>
-                                        <input type="text" class="form-control input-sm" placeholder="证件号码">
+                                        <input type="text" class="form-control input-sm" placeholder="证件号码" name="IDNumber3">
                                         <button type="button" class="btn btn-warning input-sm">
                                             <span class="glyphicon glyphicon-remove"></span>
                                         </button>
                                     </li>
                                     <li class="list-group-item p4">
-                                        <input type="text" style="width:80px;" class="form-control input-sm" placeholder="乘客姓名">
-                                        <select data-placeholder="票种" style="width:85px;" class="form-control ">
+                                        <input type="text" style="width:80px;" class="form-control input-sm" placeholder="乘客姓名" name="passengerName4">
+                                        <select data-placeholder="票种" name="ticketType4"  style="width:85px;" class="form-control ">
                                             <option value="1">成人票</option>
                                             <option value="2">小孩票</option>
                                             <option value="3">学生票</option>
                                             <option value="4">伤残军人票</option>
                                         </select>
-                                        <select data-placeholder="席别" style="width:85px;" class="form-control ">
+                                        <select data-placeholder="席别" name="seatType4"  style="width:85px;" class="form-control ">
                                             <option value="3">硬卧</option>
                                             <option value="O">二等座</option>
                                             <option value="M">一等座</option>
@@ -173,27 +172,27 @@
                                             <option value="6">高级软卧</option>
                                             <option value="WZ">无座</option>
                                         </select>
-                                        <select data-placeholder="证件类型" style="width:110px;" class="form-control ">
+                                        <select data-placeholder="证件类型" name="IDType4" style="width:110px;" class="form-control ">
                                             <option value="1">二代身份证</option>
                                             <option value="C">港澳通行证</option>
                                             <option value="G">台湾通行证</option>
                                             <option value="B">护照</option>
                                             <option value="H">外国人居留证</option>
                                         </select>
-                                        <input type="text" class="form-control input-sm" placeholder="证件号码">
+                                        <input type="text" class="form-control input-sm" placeholder="证件号码" name="IDNumber4">
                                         <button type="button" class="btn btn-warning input-sm">
                                             <span class="glyphicon glyphicon-remove"></span>
                                         </button>
                                     </li>
                                     <li class="list-group-item p5">
-                                        <input type="text" style="width:80px;" class="form-control input-sm" placeholder="乘客姓名">
-                                        <select data-placeholder="票种" style="width:85px;" class="form-control ">
+                                        <input type="text" style="width:80px;" class="form-control input-sm" placeholder="乘客姓名" name="passengerName5">
+                                        <select data-placeholder="票种" name="ticketType5"  style="width:85px;" class="form-control ">
                                             <option value="1">成人票</option>
                                             <option value="2">小孩票</option>
                                             <option value="3">学生票</option>
                                             <option value="4">伤残军人票</option>
                                         </select>
-                                        <select data-placeholder="席别" style="width:85px;" class="form-control ">
+                                        <select data-placeholder="席别" name="seatType5"  style="width:85px;" class="form-control ">
                                             <option value="3">硬卧</option>
                                             <option value="O">二等座</option>
                                             <option value="M">一等座</option>
@@ -205,14 +204,14 @@
                                             <option value="6">高级软卧</option>
                                             <option value="WZ">无座</option>
                                         </select>
-                                        <select data-placeholder="证件类型" style="width:110px;" class="form-control ">
+                                        <select data-placeholder="证件类型" name="IDType5" style="width:110px;" class="form-control ">
                                             <option value="1">二代身份证</option>
                                             <option value="C">港澳通行证</option>
                                             <option value="G">台湾通行证</option>
                                             <option value="B">护照</option>
                                             <option value="H">外国人居留证</option>
                                         </select>
-                                        <input type="text" class="form-control input-sm" placeholder="证件号码">
+                                        <input type="text" class="form-control input-sm" placeholder="证件号码" name="IDNumber5">
                                         <button type="button" class="btn btn-warning input-sm">
                                             <span class="glyphicon glyphicon-remove"></span>
                                         </button>

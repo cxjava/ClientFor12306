@@ -1,7 +1,7 @@
 $(document).ready(function() {
 
 	$("#img").click(function(event) {
-		$(this).attr('src', '/loginPassCodeNew/' + Math.random());
+		$(this).attr('src', '/submitPassCodeNew/' + Math.random());
 	});
 
 	$('.form_datetime').datetimepicker({
@@ -68,5 +68,29 @@ $(document).ready(function() {
 			$('#passenger').html(str).trigger('change')
 		}
 	});
+	var c = new WebSocket('ws://localhost:3000/sock');
+	$("#code").keyup(function() {
+		if ($(this).val().length == 4) {
+			c.send($(this).val());
+		}
+	});
 
-})
+	c.onopen = function() {
+		c.onmessage = function(response) {
+			console.log(response.data);
+			if (response.data = "update") {
+				$("#imageDiv").html('<img src="/submitPassCodeNew/" id="img" title="单击刷新验证码">');
+				$("#code").focus();
+			}
+		};
+		c.send("test");
+	}
+
+	$("#submit").click(function() {
+
+		$.post('/query', $("form").serialize(), function(data, textStatus, xhr) {
+			console.log(data);
+		});
+		return false;
+	});
+});

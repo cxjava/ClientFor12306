@@ -4,18 +4,21 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net"
 	"net/http"
 	"net/url"
 	"time"
 
 	"github.com/go-martini/martini"
+	"github.com/gorilla/websocket"
 	"github.com/martini-contrib/binding"
 	"github.com/martini-contrib/render"
 )
 
 var (
 	client = &http.Client{}
+	ws     *websocket.Conn
 )
 
 func init() {
@@ -51,6 +54,47 @@ type UserLoginForm struct {
 	Password string `form:"password" binding:"required"`
 	Code     string `form:"code" binding:"required"`
 }
+type BlogPost struct {
+	Start string `form:"start" binding:"required"`
+	End   string `form:"end" binding:"required"`
+	Train string `form:"train" binding:"required"`
+	Date  string `form:"date" binding:"required"`
+	P1    struct {
+		PassengerName1 string `form:"passengerName1" binding:"required"`
+		TicketType1    string `form:"ticketType1" binding:"required"`
+		SeatType1      string `form:"seatType1" binding:"required"`
+		IDType1        string `form:"IDType1" binding:"required"`
+		IDNumber1      string `form:"IDNumber1" binding:"required"`
+	}
+	P2 struct {
+		PassengerName2 string `form:"passengerName2" `
+		TicketType2    string `form:"ticketType2" `
+		SeatType2      string `form:"seatType2" `
+		IDType2        string `form:"IDType2" `
+		IDNumber2      string `form:"IDNumber2" `
+	}
+	P3 struct {
+		PassengerName3 string `form:"passengerName3" `
+		TicketType3    string `form:"ticketType3" `
+		SeatType3      string `form:"seatType3" `
+		IDType3        string `form:"IDType3" `
+		IDNumber3      string `form:"IDNumber3" `
+	}
+	P4 struct {
+		PassengerName4 string `form:"passengerName4" `
+		TicketType4    string `form:"ticketType4" `
+		SeatType4      string `form:"seatType4" `
+		IDType4        string `form:"IDType4" `
+		IDNumber4      string `form:"IDNumber4" `
+	}
+	P5 struct {
+		PassengerName5 string `form:"passengerName5" binding:"required"`
+		TicketType5    string `form:"ticketType5" binding:"required"`
+		SeatType5      string `form:"seatType5" binding:"required"`
+		IDType5        string `form:"IDType5" binding:"required"`
+		IDNumber5      string `form:"IDNumber5" binding:"required"`
+	}
+}
 
 func main() {
 	m := martini.Classic()
@@ -70,9 +114,12 @@ func main() {
 		r.HTML(200, "login", nil)
 	})
 
-	m.Get("/loginPassCodeNew/**", loginPassCodeNewfunc)
+	m.Get("/loginPassCodeNew/**", loginPassCodeNewFunc)
+	m.Get("/submitPassCodeNew/**", submitPassCodeNewFunc)
 	m.Post("/login", binding.Form(UserLoginForm{}), LoginForm)
+	m.Post("/query", binding.Form(BlogPost{}), QueryForm)
 	m.Post("/loadUser", loadUser)
+	m.Get("/sock", Sock)
 	// nodeWebkit, err := nw.New()
 	// if err != nil {
 	// 	panic(err)
@@ -88,7 +135,29 @@ func main() {
 	Info("c")
 	// log.Fatal(http.ListenAndServe(":8080", m))
 }
-func loginPassCodeNewfunc(res http.ResponseWriter, req *http.Request, params martini.Params) {
+func Sock(w http.ResponseWriter, r *http.Request) {
+	var err error
+	ws, err = websocket.Upgrade(w, r, nil, 1024, 1024)
+	if _, ok := err.(websocket.HandshakeError); ok {
+		http.Error(w, "Not a websocket handshake", 400)
+		return
+	} else if err != nil {
+		log.Println(err)
+		return
+	}
+	for {
+		messageType, p, err := ws.ReadMessage()
+		if err != nil {
+			log.Println("bye")
+			log.Println(err)
+			return
+		}
+		Info(string(p))
+		Info(messageType)
+
+	}
+}
+func submitPassCodeNewFunc(res http.ResponseWriter, req *http.Request, params martini.Params) {
 	login.setNewCookie()
 
 	req, err := http.NewRequest("GET", URLLoginPassCode+"&"+params["_1"], nil)
@@ -115,6 +184,37 @@ func loginPassCodeNewfunc(res http.ResponseWriter, req *http.Request, params mar
 	res.Header().Set("Content-Type", "image/jpeg")
 	res.Write(bodyByte)
 }
+func loginPassCodeNewFunc(res http.ResponseWriter, req *http.Request, params martini.Params) {
+	login.setNewCookie()
+
+	req, err := http.NewRequest("GET", URLLoginPassCode+"&"+params["_1"], nil)
+	if err != nil {
+		Error("setNewCookie http.NewRequest error:", err)
+		return
+	}
+
+	h := map[string]string{"Referer": "https://kyfw.12306.cn/otn/leftTicket/init"}
+	AddReqestHeader(req, "GET", h)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		Error("setNewCookie client.Do error:", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	bodyByte, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		Error("ioutil.ReadAll:", err)
+		return
+	}
+	res.Header().Set("Content-Type", "image/jpeg")
+	res.Write(bodyByte)
+}
+func QueryForm(res http.ResponseWriter, req *http.Request, params martini.Params, r render.Render, l BlogPost) {
+	Info(l)
+	r.JSON(200, map[string]interface{}{"r": true, "o": l})
+}
 func LoginForm(res http.ResponseWriter, req *http.Request, params martini.Params, r render.Render, l UserLoginForm) {
 	fmt.Println(l.Username)
 	fmt.Println(l.Password)
@@ -122,7 +222,14 @@ func LoginForm(res http.ResponseWriter, req *http.Request, params martini.Params
 	login.Username = l.Username
 	login.Password = l.Password
 	login.Captcha = l.Code
-
+	if b, err := login.checkUser(); err != nil {
+		Error(err)
+		return
+	} else if b {
+		Info("have logined!")
+		r.HTML(200, "main", nil)
+		return
+	}
 	if result, msg := login.loginAysnSuggest(); !result {
 		r.HTML(200, "login", map[string]interface{}{"r": !result, "msg": msg, "username": l.Username, "password": l.Password})
 		return
@@ -140,5 +247,9 @@ func loadUser(res http.ResponseWriter, req *http.Request, params martini.Params,
 	login.leftTicketInit()
 	login.userLogin()
 	passenger := login.getPassengerDTO()
+	go func() {
+		time.Sleep(9 * time.Second)
+		ws.WriteMessage(1, []byte("update"))
+	}()
 	r.JSON(200, map[string]interface{}{"r": true, "o": passenger.Data.NormalPassengers})
 }
