@@ -88,11 +88,11 @@ type BlogPost struct {
 		IDNumber4      string `form:"IDNumber4" `
 	}
 	P5 struct {
-		PassengerName5 string `form:"passengerName5" binding:"required"`
-		TicketType5    string `form:"ticketType5" binding:"required"`
-		SeatType5      string `form:"seatType5" binding:"required"`
-		IDType5        string `form:"IDType5" binding:"required"`
-		IDNumber5      string `form:"IDNumber5" binding:"required"`
+		PassengerName5 string `form:"passengerName5"`
+		TicketType5    string `form:"ticketType5"`
+		SeatType5      string `form:"seatType5"`
+		IDType5        string `form:"IDType5"`
+		IDNumber5      string `form:"IDNumber5"`
 	}
 }
 
