@@ -54,12 +54,19 @@ type UserLoginForm struct {
 	Password string `form:"password" binding:"required"`
 	Code     string `form:"code" binding:"required"`
 }
-type BlogPost struct {
-	Start string `form:"start" binding:"required"`
-	End   string `form:"end" binding:"required"`
-	Train string `form:"train" binding:"required"`
-	Date  string `form:"date" binding:"required"`
-	P1    struct {
+type TicketQuery struct {
+	CDN                string
+	FromStations       []string
+	ToStations         []string
+	Trians             []string
+	PassengerTicketStr string
+	OldPassengerStr    string
+	NumOfSeatType      map[string]int
+	Start              string `form:"start" binding:"required"`
+	End                string `form:"end" binding:"required"`
+	Train              string `form:"train" binding:"required"`
+	TrainDate          string `form:"date" binding:"required"`
+	P1                 struct {
 		PassengerName1 string `form:"passengerName1" binding:"required"`
 		TicketType1    string `form:"ticketType1" binding:"required"`
 		SeatType1      string `form:"seatType1" binding:"required"`
@@ -117,7 +124,7 @@ func main() {
 	m.Get("/loginPassCodeNew/**", loginPassCodeNewFunc)
 	m.Get("/submitPassCodeNew/**", submitPassCodeNewFunc)
 	m.Post("/login", binding.Form(UserLoginForm{}), LoginForm)
-	m.Post("/query", binding.Form(BlogPost{}), QueryForm)
+	m.Post("/query", binding.Form(TicketQuery{}), QueryForm)
 	m.Post("/loadUser", loadUser)
 	m.Get("/sock", Sock)
 	// nodeWebkit, err := nw.New()
@@ -211,9 +218,9 @@ func loginPassCodeNewFunc(res http.ResponseWriter, req *http.Request, params mar
 	res.Header().Set("Content-Type", "image/jpeg")
 	res.Write(bodyByte)
 }
-func QueryForm(res http.ResponseWriter, req *http.Request, params martini.Params, r render.Render, l BlogPost) {
-	Info(l)
-	r.JSON(200, map[string]interface{}{"r": true, "o": l})
+func QueryForm(res http.ResponseWriter, req *http.Request, params martini.Params, r render.Render, tq TicketQuery) {
+	Info(tq)
+	r.JSON(200, map[string]interface{}{"r": true, "o": tq})
 }
 func LoginForm(res http.ResponseWriter, req *http.Request, params martini.Params, r render.Render, l UserLoginForm) {
 	fmt.Println(l.Username)

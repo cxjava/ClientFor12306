@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"time"
 
 	"github.com/lxn/walk"
 
@@ -28,7 +27,7 @@ type Order struct {
 	OldPassengerStr    string
 	RepeatSubmitToken  string
 	SecretStr          string
-	TrainDate          time.Time
+	TrainDate          string
 	Ticket             Ticket
 	SubmitCaptchaStr   chan string
 	RandCode           string
@@ -75,8 +74,8 @@ func (order *Order) confirmSingleForQueue() error {
 
 func (order *Order) getQueueCount() error {
 	val := url.Values{}
-	val.Add("train_date", order.TrainDate.Local().Format(`Mon+Jan+02+2006+15%3A04%3A05+GMT%2B0700+(China+Standard+Time)`))
-	// val.Add("train_date", `Thu Jun 05 2014 00:00:00 GMT 0800 (China Standard Time)`)
+	// val.Add("train_date", order.TrainDate.Local().Format(`Mon+Jan+02+2006+15%3A04%3A05+GMT%2B0700+(China+Standard+Time)`))
+	val.Add("train_date", `Thu Jun 05 2014 00:00:00 GMT 0800 (China Standard Time)`)
 	val.Add("train_no", order.Ticket.TrainNo)
 	val.Add("stationTrainCode", order.Ticket.StationTrainCode)
 	val.Add("seatType", order.SeatType)
@@ -234,8 +233,8 @@ func (order *Order) initDc() error {
 func (order *Order) submitOrderRequest() error {
 	val := url.Values{}
 	val.Add("secretStr", order.SecretStr)
-	val.Add("train_date", order.TrainDate.Format("2006-01-02"))
-	val.Add("back_train_date", order.TrainDate.Format("2006-01-02"))
+	val.Add("train_date", order.TrainDate)
+	val.Add("back_train_date", order.TrainDate)
 	val.Add("tour_flag", Tour_flag)
 	val.Add("purpose_codes", Purpose_codes)
 	val.Add("query_from_station_name", order.Ticket.FromStationName)

@@ -8,7 +8,6 @@ type PassengerOrder struct {
 	PassengerIdTypeCode string
 	PassengerIdNo       string
 	SeatType            string //席别 硬卧 硬座
-	SeatTypeName        string
 }
 
 type TicketQueryInfo struct {
@@ -22,7 +21,6 @@ type TicketQueryInfo struct {
 	TriansStr          string
 	PassengerTicketStr string
 	OldPassengerStr    string
-	NumOfPassenger     int
 	NumOfSeatType      map[string]int
 	P1                 *PassengerOrder
 	P2                 *PassengerOrder
