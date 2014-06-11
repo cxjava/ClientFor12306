@@ -71,7 +71,7 @@ $(document).ready(function() {
 	var c = new WebSocket('ws://localhost:3000/sock');
 	$("#code").keyup(function() {
 		if ($(this).val().length == 4) {
-			c.send($(this).val());
+			c.send("code#" + $(this).val());
 		}
 	});
 
@@ -79,7 +79,7 @@ $(document).ready(function() {
 		c.onmessage = function(response) {
 			console.log(response.data);
 			if (response.data = "update") {
-				$("#imageDiv").html('<img src="/submitPassCodeNew/" id="img" title="单击刷新验证码">');
+				$("#imageDiv").html('<img src="/submitPassCodeNew/' + Math.random() + '" id="img" title="单击刷新验证码">');
 				$("#code").focus();
 			}
 		};
@@ -92,5 +92,10 @@ $(document).ready(function() {
 			console.log(data);
 		});
 		return false;
+	});
+
+	$("#imageDiv").click(function(event) {
+		$("#img").attr('src', '/submitPassCodeNew/' + Math.random());
+		$("#code").focus();
 	});
 });

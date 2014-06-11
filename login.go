@@ -138,7 +138,7 @@ func (l *Login) userLogin() {
 	if err != nil {
 		Error("userLogin DoForWardRequest error:", err)
 	}
-	Info("userLogin body:", body)
+	Debug("userLogin body:", body)
 }
 
 //获取联系人
@@ -152,7 +152,7 @@ func (l *Login) getPassengerDTO() (p PassengerDTO) {
 		Error("getPassengerDTO DoForWardRequest error:", err)
 		return
 	}
-	Info("getPassengerDTO body:", body)
+	Debug("getPassengerDTO body:", body)
 	if !strings.Contains(body, "passenger_name") {
 		Error("获取联系人出错!!!!!!返回:", body)
 		return
@@ -172,7 +172,7 @@ func (l *Login) initQueryUserInfo() {
 	if err != nil {
 		Error("initQueryUserInfo DoForWardRequest error:", err)
 	}
-	Info("initQueryUserInfo body:", body)
+	Debug("initQueryUserInfo body:", body)
 }
 
 func (l *Login) leftTicketInit() {
@@ -181,5 +181,5 @@ func (l *Login) leftTicketInit() {
 	if err != nil {
 		Error("initQueryUserInfo DoForWardRequest error:", err)
 	}
-	Info("initQueryUserInfo body:", body)
+	Debug("initQueryUserInfo body:", body)
 }

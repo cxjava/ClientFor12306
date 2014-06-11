@@ -30,7 +30,8 @@ const (
 	UserAgent           = `Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.1; WOW64; Trident/6.0;)`
 	Json_att            = ""
 	Tour_flag           = "dc"
-	Purpose_codes       = "00"
+	Purpose_codes       = "ADULT"
+	Purpose_codes2      = "00"
 	Rand                = "sjrand"
 	Randp               = "randp"
 	Cancel_flag         = "2"

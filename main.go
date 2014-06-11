@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/go-martini/martini"
@@ -159,26 +160,35 @@ func Sock(w http.ResponseWriter, r *http.Request) {
 			log.Println(err)
 			return
 		}
-		Info(string(p))
-		Info(messageType)
+		msg := string(p)
+		Info(msg)
+		if strings.Contains(msg, "code#") {
+			go func() {
+				order.checkOrderInfo()
+			}()
 
+			code := msg[5:]
+			Info("code:", code)
+			order.SubmitCaptchaStr <- code
+		}
+		Info(messageType)
 	}
 }
 func submitPassCodeNewFunc(res http.ResponseWriter, req *http.Request, params martini.Params) {
 	login.setNewCookie()
 
-	req, err := http.NewRequest("GET", URLLoginPassCode+"&"+params["_1"], nil)
+	req, err := http.NewRequest("GET", URLPassCodeNewPassenger+"&"+params["_1"], nil)
 	if err != nil {
-		Error("setNewCookie http.NewRequest error:", err)
+		Error("submitPassCodeNewFunc http.NewRequest error:", err)
 		return
 	}
 
-	h := map[string]string{"Referer": "https://kyfw.12306.cn/otn/leftTicket/init"}
+	h := map[string]string{"Referer": "https://kyfw.12306.cn/otn/confirmPassenger/initDc"}
 	AddReqestHeader(req, "GET", h)
 
 	resp, err := client.Do(req)
 	if err != nil {
-		Error("setNewCookie client.Do error:", err)
+		Error("submitPassCodeNewFunc client.Do error:", err)
 		return
 	}
 	defer resp.Body.Close()
@@ -220,6 +230,27 @@ func loginPassCodeNewFunc(res http.ResponseWriter, req *http.Request, params mar
 }
 func QueryForm(res http.ResponseWriter, req *http.Request, params martini.Params, r render.Render, tq TicketQuery) {
 	Info(tq)
+	tq.parseTicket()
+	tq.parseStranger()
+	Info(tq)
+	go func() {
+		LeftTicketInit()
+		DYQueryJs()
+
+		order = tq.Order()
+		// q.leftTicketInit()
+		checkUser("")
+		order.submitOrderRequest()
+		// q.DYQueryJs()
+		order.initDc()
+		order.GetPassengerDTO()
+		Info("order:", order)
+		go func() {
+			order.checkOrderInfo()
+		}()
+		ws.WriteMessage(1, []byte("update"))
+	}()
+
 	r.JSON(200, map[string]interface{}{"r": true, "o": tq})
 }
 func LoginForm(res http.ResponseWriter, req *http.Request, params martini.Params, r render.Render, l UserLoginForm) {
@@ -254,9 +285,6 @@ func loadUser(res http.ResponseWriter, req *http.Request, params martini.Params,
 	login.leftTicketInit()
 	login.userLogin()
 	passenger := login.getPassengerDTO()
-	go func() {
-		time.Sleep(9 * time.Second)
-		ws.WriteMessage(1, []byte("update"))
-	}()
+
 	r.JSON(200, map[string]interface{}{"r": true, "o": passenger.Data.NormalPassengers})
 }

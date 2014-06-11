@@ -78,12 +78,13 @@ func initQueryUserInfo(cdn string) error {
 }
 
 func checkUser(cdn string) error {
-	body, err := DoForWardRequest(cdn, "POST", URLCheckUser, nil)
+	h := map[string]string{"Referer": "https://kyfw.12306.cn/otn/leftTicket/init"}
+	body, err := DoForWardRequestHeader(cdn, "POST", URLCheckUser, nil, h)
 	if err != nil {
 		Error("checkUser DoForWardRequest error:", err)
 		return err
 	}
-	Debug("checkUser body:", body)
+	Info("checkUser body:", body)
 	return nil
 }
 

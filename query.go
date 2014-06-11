@@ -79,7 +79,6 @@ func getSeatType(seatTypeNum map[string]int) (t string) {
 func validateNum(ticketNum, seatTypeNum map[string]int) (b bool) {
 	b = true
 	for k, v := range seatTypeNum {
-		Info(k, v, ticketNum[k])
 		if ticketNum[k] < v {
 			b = false
 			break
@@ -96,7 +95,7 @@ func (t *TicketQuery) queryLeftTicket() (error, *QueryLeftNewDTO) {
 	leftTicketUrl += "leftTicketDTO.train_date=" + t.TrainDate + "&"
 	leftTicketUrl += "leftTicketDTO.from_station=" + StationMap[fr[rand.Intn(len(fr))]] + "&"
 	leftTicketUrl += "leftTicketDTO.to_station=" + StationMap[to[rand.Intn(len(to))]] + "&"
-	leftTicketUrl += "purpose_codes=ADULT"
+	leftTicketUrl += "purpose_codes=" + Purpose_codes
 
 	Info("queryLeftTicket url:", leftTicketUrl)
 
