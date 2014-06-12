@@ -43,7 +43,7 @@ func (order *Order) confirmSingleForQueue() error {
 	val.Add("randCode", order.RandCode)
 	val.Add("purpose_codes", Purpose_codes)
 	val.Add("key_check_isChange", order.KeyCheckIsChange)
-	val.Add("leftTicket", order.Ticket.YpInfo)
+	val.Add("leftTicketStr", order.Ticket.YpInfo)
 	val.Add("train_location", order.TrainLocation)
 	val.Add("_json_att", Json_att)
 	val.Add("REPEAT_SUBMIT_TOKEN", order.RepeatSubmitToken)
