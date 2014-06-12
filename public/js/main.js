@@ -80,7 +80,7 @@ $(document).ready(function() {
 			console.log(response.data);
 			if (response.data = "update") {
 				$("#imageDiv").html('<img src="/submitPassCodeNew/' + Math.random() + '" id="img" title="单击刷新验证码">');
-				$("#code").focus();
+				$("#code").val("").focus();
 			}
 		};
 		c.send("test");
@@ -96,6 +96,6 @@ $(document).ready(function() {
 
 	$("#imageDiv").click(function(event) {
 		$("#img").attr('src', '/submitPassCodeNew/' + Math.random());
-		$("#code").focus();
+		$("#code").val("").focus();
 	});
 });

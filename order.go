@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"time"
 
 	_ "image/gif"
 	_ "image/jpeg"
@@ -38,7 +37,7 @@ func (order *Order) confirmSingleForQueue() error {
 	val.Add("REPEAT_SUBMIT_TOKEN", order.RepeatSubmitToken)
 	val.Add("_json_att", Json_att)
 	val.Add("train_location", order.TrainLocation)
-	val.Add("leftTicket", order.Ticket.YpInfo)
+	val.Add("leftTicketStr", order.Ticket.YpInfo)
 	val.Add("key_check_isChange", order.KeyCheckIsChange)
 	val.Add("purpose_codes", Purpose_codes2)
 	val.Add("randCode", order.RandCode)
@@ -46,7 +45,7 @@ func (order *Order) confirmSingleForQueue() error {
 	val.Add("passengerTicketStr", order.PassengerTicketStr)
 
 	Info("confirmSingleForQueue params:", val.Encode())
-	h := map[string]string{"Referer": "https://kyfw.12306.cn/otn/confirmPassenger/initDc"}
+	h := map[string]string{"Accept": "application/json, text/javascript, */*; q=0.01", "x-requested-with": "XMLHttpRequest", "Referer": "https://kyfw.12306.cn/otn/confirmPassenger/initDc"}
 	body, err := DoForWardRequestHeader(order.CDN, "POST", URLConfirmSingleForQueue, strings.NewReader(val.Encode()), h)
 	if err != nil {
 		Error("confirmSingleForQueue DoForWardRequest error:", err)
@@ -90,7 +89,7 @@ func (order *Order) getQueueCount() error {
 	val.Add("train_date", `Wed Jun 25 00:00:00 UTC+0800 2014`)
 
 	Info("getQueueCount params:", val.Encode())
-	h := map[string]string{"Referer": "https://kyfw.12306.cn/otn/confirmPassenger/initDc"}
+	h := map[string]string{"Accept": "application/json, text/javascript, */*; q=0.01", "x-requested-with": "XMLHttpRequest", "Referer": "https://kyfw.12306.cn/otn/confirmPassenger/initDc"}
 	body, err := DoForWardRequestHeader(order.CDN, "POST", URLQueueCount, strings.NewReader(val.Encode()), h)
 	if err != nil {
 		Error("getQueueCount DoForWardRequest error:", err)
@@ -98,7 +97,7 @@ func (order *Order) getQueueCount() error {
 	}
 	Info("getQueueCount body:", body)
 
-	time.Sleep(time.Second * 2)
+	// time.Sleep(time.Second * 2)
 	return order.confirmSingleForQueue()
 }
 
@@ -119,7 +118,7 @@ func (order *Order) checkOrderInfo() error {
 	val.Add("REPEAT_SUBMIT_TOKEN", order.RepeatSubmitToken)
 
 	Info("checkOrderInfo params:", val.Encode())
-	h := map[string]string{"Referer": "https://kyfw.12306.cn/otn/confirmPassenger/initDc"}
+	h := map[string]string{"x-requested-with": "XMLHttpRequest", "Referer": "https://kyfw.12306.cn/otn/confirmPassenger/initDc"}
 	body, err := DoForWardRequestHeader(order.CDN, "POST", URLCheckOrderInfo, strings.NewReader(val.Encode()), h)
 	if err != nil {
 		Error("checkOrderInfo DoForWardRequest error:", err)
@@ -136,20 +135,20 @@ func (order *Order) checkOrderInfo() error {
 	if !coi.Data.SubmitStatus {
 		return fmt.Errorf("checkOrderInfo 出错！body:%v", body)
 	}
-	time.Sleep(time.Second * 2)
+	// time.Sleep(time.Second * 2)
 	return order.getQueueCount()
 }
 
 func (order *Order) checkRandCodeAnsyn(randCode string) (r bool, msg []string) {
 	val := url.Values{}
-	val.Add("randCode", randCode)
-	val.Add("rand", Randp)
-	val.Add("_json_att", Json_att)
 	val.Add("REPEAT_SUBMIT_TOKEN", order.RepeatSubmitToken)
+	val.Add("_json_att", Json_att)
+	val.Add("rand", Randp)
+	val.Add("randCode", randCode)
 
-	params, _ := url.QueryUnescape(val.Encode())
-	Info("checkRandCodeAnsyn params:", params)
-	body, err := DoForWardRequestHeader(order.CDN, "POST", URLCheckRandCodeAnsyn, strings.NewReader(params), nil)
+	Info("checkRandCodeAnsyn params:", val.Encode())
+	h := map[string]string{"x-requested-with": "XMLHttpRequest", "Referer": "https://kyfw.12306.cn/otn/confirmPassenger/initDc"}
+	body, err := DoForWardRequestHeader(order.CDN, "POST", URLCheckRandCodeAnsyn, strings.NewReader(val.Encode()), h)
 	if err != nil {
 		Error("checkRandCodeAnsyn DoForWardRequest error:", err)
 		return false, []string{err.Error()}
@@ -183,7 +182,7 @@ func (order *Order) GetPassengerDTO() {
 }
 
 func (order *Order) initDc() error {
-	h := map[string]string{"Referer": "https://kyfw.12306.cn/otn/leftTicket/init"}
+	h := map[string]string{"Accept": "text/html, application/xhtml+xml, */*", "Referer": "https://kyfw.12306.cn/otn/leftTicket/init"}
 	body, err := DoForWardRequestHeader(order.CDN, "POST", URLInitDc, strings.NewReader("_json_att="), h)
 	if err != nil {
 		Error("initDc DoForWardRequest error:", err)
@@ -250,9 +249,10 @@ func (order *Order) submitOrderRequest() error {
 	val.Add("query_to_station_name", order.Ticket.ToStationName)
 
 	params, _ := url.QueryUnescape(val.Encode())
+	params = params + "&undefined"
 	Info("submitOrderRequest params:", params)
-	h := map[string]string{"Referer": "https://kyfw.12306.cn/otn/leftTicket/query"}
-	body, err := DoForWardRequestHeader(order.CDN, "POST", URLSubmitOrderRequest, strings.NewReader(params+"&undefined"), h)
+	h := map[string]string{"x-requested-with": "XMLHttpRequest", "Referer": "https://kyfw.12306.cn/otn/leftTicket/init"}
+	body, err := DoForWardRequestHeader(order.CDN, "POST", URLSubmitOrderRequest, strings.NewReader(params), h)
 	if err != nil {
 		Error("submitOrderRequest DoForWardRequest error:", err)
 		return err

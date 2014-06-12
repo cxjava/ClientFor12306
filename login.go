@@ -35,9 +35,7 @@ type LoginAysnSuggest struct {
 
 //获取新的cookie
 func (l *Login) setNewCookie() error {
-	if l.Cookie != "" {
-		return nil
-	}
+
 	req, err := http.NewRequest("GET", URLLoginJs, nil)
 	if err != nil {
 		Error("setNewCookie http.NewRequest error:", err)
@@ -54,6 +52,10 @@ func (l *Login) setNewCookie() error {
 	}
 	defer resp.Body.Close()
 
+	if l.Cookie != "" {
+		return nil
+	}
+
 	l.Cookie = GetCookieFromRespHeader(resp)
 	Info("Cookie=" + l.Cookie + "=")
 	bodyByte, err := ioutil.ReadAll(resp.Body)
@@ -69,13 +71,8 @@ func (l *Login) CheckRandCodeAnsyn() (r bool, msg []string) {
 	b := url.Values{}
 	b.Add("randCode", l.Captcha)
 	b.Add("rand", Rand)
-	params, err := url.QueryUnescape(b.Encode())
-	if err != nil {
-		Error("CheckRandCodeAnsyn url.QueryUnescape error:", err)
-		return false, []string{err.Error()}
-	}
-	Info("CheckRandCodeAnsyn params:", params)
-	content, err := DoForWardRequest(login.CDN, "POST", URLCheckRandCodeAnsyn, strings.NewReader(params))
+	Info("CheckRandCodeAnsyn params:", b.Encode())
+	content, err := DoForWardRequest(login.CDN, "POST", URLCheckRandCodeAnsyn, strings.NewReader(b.Encode()))
 	if err != nil {
 		Error("CheckRandCodeAnsyn DoForWardRequest error:", err)
 		return false, []string{err.Error()}

@@ -56,15 +56,42 @@ func dyLoginJs(cdn string) error {
 	Debug("dyLoginJs body:", body)
 	return nil
 }
+func LoginInit(cdn string) error {
+	h := map[string]string{"Referer": "https://kyfw.12306.cn/otn/"}
+	body, err := DoForWardRequestHeader(cdn, "GET", URLLoginInit, nil, h)
+	if err != nil {
+		Error("LoginInit DoForWardRequest error:", err)
+		return err
+	}
+	Debug("LoginInit body:", body)
+	return nil
+}
 
 func dyQueryJs(cdn string) error {
-	body, err := DoForWardRequest(cdn, "GET", URLQueryJs, nil)
+	h := map[string]string{"Referer": "https://kyfw.12306.cn/otn/leftTicket/init"}
+	body, err := DoForWardRequestHeader(cdn, "GET", URLQueryJs, nil, h)
 	if err != nil {
 		Error("dyQueryJs DoForWardRequest error:", err)
 		return err
 	}
 	Debug("dyQueryJs body:", body)
 	return nil
+
+}
+
+func GetPassCodes(cdn string) error {
+	h := map[string]string{
+		"Referer": "https://kyfw.12306.cn/otn/leftTicket/init",
+		"Accept":  "image/png, image/svg+xml, image/*;q=0.8, */*;q=0.5",
+	}
+	body, err := DoForWardRequestHeader(cdn, "GET", URLLoginPassCode, nil, h)
+	if err != nil {
+		Error("GetPassCodes DoForWardRequest error:", err)
+		return err
+	}
+	Debug("GetPassCodes body:", body)
+	return nil
+
 }
 
 func initQueryUserInfo(cdn string) error {
@@ -78,7 +105,10 @@ func initQueryUserInfo(cdn string) error {
 }
 
 func checkUser(cdn string) error {
-	h := map[string]string{"Referer": "https://kyfw.12306.cn/otn/leftTicket/init"}
+	h := map[string]string{
+		"x-requested-with": "XMLHttpRequest",
+		"Referer": "https://kyfw.12306.cn/otn/leftTicket/init",
+	}
 	body, err := DoForWardRequestHeader(cdn, "POST", URLCheckUser, nil, h)
 	if err != nil {
 		Error("checkUser DoForWardRequest error:", err)

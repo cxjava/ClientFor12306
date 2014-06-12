@@ -119,6 +119,7 @@ func main() {
 	}))
 
 	m.Get("/", func(r render.Render) {
+		go LoginInit("")
 		r.HTML(200, "login", nil)
 	})
 
@@ -163,19 +164,25 @@ func Sock(w http.ResponseWriter, r *http.Request) {
 		msg := string(p)
 		Info(msg)
 		if strings.Contains(msg, "code#") {
+			code := msg[5:]
+			Info("code:", code)
+
+			if b, msg := order.checkRandCodeAnsyn(code); !b {
+				Info(msg)
+				ws.WriteMessage(1, []byte("update"))
+				return
+			}
+
 			go func() {
 				order.checkOrderInfo()
 			}()
 
-			code := msg[5:]
-			Info("code:", code)
 			order.SubmitCaptchaStr <- code
 		}
 		Info(messageType)
 	}
 }
 func submitPassCodeNewFunc(res http.ResponseWriter, req *http.Request, params martini.Params) {
-	login.setNewCookie()
 
 	req, err := http.NewRequest("GET", URLPassCodeNewPassenger+"&"+params["_1"], nil)
 	if err != nil {
@@ -234,10 +241,11 @@ func QueryForm(res http.ResponseWriter, req *http.Request, params martini.Params
 	tq.parseStranger()
 	Info(tq)
 	go func() {
-		LeftTicketInit()
-		DYQueryJs()
+		// LeftTicketInit()
+		// DYQueryJs()
 
 		order = tq.Order()
+		Info(order)
 		// q.leftTicketInit()
 		checkUser("")
 		order.submitOrderRequest()
@@ -245,9 +253,9 @@ func QueryForm(res http.ResponseWriter, req *http.Request, params martini.Params
 		order.initDc()
 		order.GetPassengerDTO()
 		Info("order:", order)
-		go func() {
-			order.checkOrderInfo()
-		}()
+		// go func() {
+		// 	order.checkOrderInfo()
+		// }()
 		ws.WriteMessage(1, []byte("update"))
 	}()
 
@@ -268,13 +276,20 @@ func LoginForm(res http.ResponseWriter, req *http.Request, params martini.Params
 		r.HTML(200, "main", nil)
 		return
 	}
+
+	if result, msg := login.CheckRandCodeAnsyn(); !result {
+		r.HTML(200, "login", map[string]interface{}{"r": !result, "msg": msg, "username": l.Username, "password": l.Password})
+		return
+	}
 	if result, msg := login.loginAysnSuggest(); !result {
 		r.HTML(200, "login", map[string]interface{}{"r": !result, "msg": msg, "username": l.Username, "password": l.Password})
 		return
 	}
+
 	login.checkUser()
 	login.userLogin()
 	go login.initQueryUserInfo()
+	login.leftTicketInit()
 	r.HTML(200, "main", nil)
 }
 func loadUser(res http.ResponseWriter, req *http.Request, params martini.Params, r render.Render) {
@@ -283,7 +298,9 @@ func loadUser(res http.ResponseWriter, req *http.Request, params martini.Params,
 		return
 	}
 	login.leftTicketInit()
-	login.userLogin()
+	dyQueryJs("")
+	GetPassCodes("")
+	// login.userLogin()
 	passenger := login.getPassengerDTO()
 
 	r.JSON(200, map[string]interface{}{"r": true, "o": passenger.Data.NormalPassengers})

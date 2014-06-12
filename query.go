@@ -99,10 +99,15 @@ func (t *TicketQuery) queryLeftTicket() (error, *QueryLeftNewDTO) {
 
 	Info("queryLeftTicket url:", leftTicketUrl)
 
-	//go DoForWardRequest(t.CDN, "GET", URLQueryLog+leftTicketUrl, nil)
+	h := map[string]string{
+		"Cache-Control":     "no-cache",
+		"x-requested-with":  "XMLHttpRequest",
+		"Referer":           "https://kyfw.12306.cn/otn/leftTicket/init",
+		"If-Modified-Since": time.Now().Local().Format(time.RFC1123Z),
+		"If-None-Match":     strconv.FormatInt(time.Now().UnixNano(), 10),
+	}
 
-	h := map[string]string{"If-Modified-Since": time.Now().Local().Format(time.RFC1123Z),
-		"If-None-Match": strconv.FormatInt(time.Now().UnixNano(), 10)}
+	go DoForWardRequestHeader(t.CDN, "GET", URLQueryLog+leftTicketUrl, nil, h)
 
 	body, err := DoForWardRequestHeader(t.CDN, "GET", URLQuery+leftTicketUrl, nil, h)
 	if err != nil {
