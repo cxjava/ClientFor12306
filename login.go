@@ -17,22 +17,6 @@ type Login struct {
 	CDN      string
 }
 
-type CheckRandCode struct {
-	Basic
-	Data             string      `json:"data"`
-	Messages         []string    `json:"messages,omitempty"`
-	ValidateMessages interface{} `json:"validateMessages,omitempty"`
-}
-
-type LoginAysnSuggest struct {
-	Basic
-	Data struct {
-		LoginCheck string `json:"loginCheck"`
-	}
-	Messages         []string    `json:"messages,omitempty"`
-	ValidateMessages interface{} `json:"validateMessages,omitempty"`
-}
-
 //获取新的cookie
 func (l *Login) setNewCookie() error {
 

@@ -19,6 +19,20 @@ import (
 )
 
 var (
+	SubmitCaptchaStr = make(chan string)
+	login            = &Login{}
+	ticket           = &TicketQueryInfo{
+		SubmitCaptchaStr: make(chan string),
+		P1:               &PassengerOrder{},
+		P2:               &PassengerOrder{},
+		P3:               &PassengerOrder{},
+		P4:               &PassengerOrder{},
+		P5:               &PassengerOrder{},
+	}
+
+	mapPassengers = make(map[string]Passenger)
+)
+var (
 	client = &http.Client{}
 	ws     *websocket.Conn
 )
