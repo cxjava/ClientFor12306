@@ -22,6 +22,7 @@ type Query struct {
 
 //查询
 func (q *Query) Order() (or *Order) {
+
 	or = nil
 	if err, ticketInfo := q.queryLeftTicket(); err == nil { //获取车次
 		for _, trainCode := range q.TrianCodes { //要预订的车次
@@ -44,9 +45,12 @@ func (q *Query) Order() (or *Order) {
 							SeatType:           getSeatType(q.NumOfSeatType),
 						}
 						break
+					} else if data.ButtonTextInfo != "预订" {
+						Warn("车次", tkt.StationTrainCode, data.ButtonTextInfo)
 					} else {
-						Info("车次", tkt.StationTrainCode, "余票不足！！！剩余票：", fmt.Sprintf("%v", ticketNum))
-						Info("订购的票:", fmt.Sprintf("%v", q.NumOfSeatType))
+						Warn("车次", tkt.StationTrainCode, "余票不足！！！")
+						Warn("剩余的票:", fmt.Sprintf("%v", ticketNum))
+						Warn("订购的票:", fmt.Sprintf("%v", q.NumOfSeatType))
 						break
 					}
 				}

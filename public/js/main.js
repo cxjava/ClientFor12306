@@ -5,9 +5,9 @@ $(document).ready(function() {
 	});
 
 	$('.form_datetime').datetimepicker({
-		endDate: "+19d",
+		endDate: "+20d",
 		startDate: "+0d",
-		initialDate: "+19d",
+		initialDate: "+20d",
 		format: 'yyyy-mm-dd',
 		todayBtn: 1,
 		autoclose: 1,

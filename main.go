@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-martini/martini"
@@ -18,10 +19,13 @@ import (
 )
 
 var (
-	login  = &Login{}
-	order  = &Order{}
-	client = &http.Client{}
-	ws     *websocket.Conn
+	queryChannel = make(chan int, 3)    // 查询线程
+	cdnChannel   = make(chan string, 1) // CDN线程
+	querywg      = sync.WaitGroup{}     // 用于等待所有 goroutine 结束
+	login        = &Login{}
+	order        = &Order{}
+	client       = &http.Client{}
+	ws           *websocket.Conn
 )
 
 func init() {
@@ -226,20 +230,44 @@ func QueryForm(res http.ResponseWriter, req *http.Request, params martini.Params
 	tq.parseStranger(query)
 	Info(query)
 	go func() {
-		query.CDN = Conf.CDN[0]
-		order = query.Order()
-		if order != nil {
-			if re, err := order.checkUser(); re {
-				order.submitOrderRequest()
-				order.initDc()
-				go order.GetPassengerDTO()
-				ws.WriteMessage(1, []byte("update"))
-			} else {
-				Error("checkUser 失败!", err)
+		close(cdnChannel)
+		cdnChannel = make(chan string, 1)
+		for {
+			for _, cdn := range Conf.CDN {
+				cdnChannel <- cdn
 			}
-		} else {
-			Error("order is nil")
 		}
+	}()
+	go func() {
+
+		for {
+			if cdn, ok := <-cdnChannel; ok {
+				querywg.Add(1)
+				queryChannel <- 1
+				go func() {
+					defer func() {
+						<-queryChannel
+						querywg.Done()
+					}()
+					query.CDN = cdn
+					order = query.Order()
+					if order != nil {
+						if re, err := order.checkUser(); re {
+							order.submitOrderRequest()
+							order.initDc()
+							go order.GetPassengerDTO()
+							ws.WriteMessage(1, []byte("update"))
+						} else {
+							Error("checkUser 失败!", err)
+						}
+					}
+				}()
+
+			} else {
+				break
+			}
+		}
+		querywg.Wait()
 	}()
 
 	r.JSON(200, map[string]interface{}{"r": true, "o": query})
