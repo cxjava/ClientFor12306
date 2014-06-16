@@ -13,6 +13,7 @@ import (
 
 	"github.com/go-martini/martini"
 	"github.com/gorilla/websocket"
+	"github.com/lonnc/golang-nw"
 	"github.com/martini-contrib/binding"
 	"github.com/martini-contrib/render"
 )
@@ -129,18 +130,18 @@ func main() {
 	m.Post("/query", binding.Form(TicketQuery{}), QueryForm)
 	m.Post("/loadUser", loadUser)
 	m.Get("/sock", Sock)
-	// nodeWebkit, err := nw.New()
-	// if err != nil {
-	// 	panic(err)
-	// }
+	nodeWebkit, err := nw.New()
+	if err != nil {
+		panic(err)
+	}
 	Info("a")
 	// Pick a random localhost port, start listening for http requests using default handler
 	// and send a message back to node-webkit to redirect
-	// if err := nodeWebkit.ListenAndServe(m); err != nil {
-	// 	panic(err)
-	// }
+	if err := nodeWebkit.ListenAndServe(m); err != nil {
+		panic(err)
+	}
 	Info("b")
-	m.Run()
+	// m.Run()
 	Info("c")
 	// log.Fatal(http.ListenAndServe(":8080", m))
 }
