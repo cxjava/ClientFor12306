@@ -3,9 +3,7 @@ package main
 import (
 	"compress/gzip"
 	"crypto/tls"
-	"encoding/json"
 	"fmt"
-	"image"
 	"io"
 	"io/ioutil"
 	"net"
@@ -15,148 +13,52 @@ import (
 	"strings"
 )
 
-var (
-	passenger = &PassengerDTO{}
-)
-
-//获取联系人
-func getPassengerDTO() {
-	for _, cdn := range Conf.CDN {
-		Info("开始获取联系人！")
-		body, err := DoForWardRequest(cdn, "POST", URLGetPassengerDTOs, nil)
-		if err != nil {
-			Error("getPassengerDTO DoForWardRequest error:", err)
-			continue
-		}
-		Debug("getPassengerDTO body:", body)
-
-		if !strings.Contains(body, "passenger_name") {
-			Error("获取联系人出错!!!!!!返回:", body)
-			continue
-		}
-
-		if err := json.Unmarshal([]byte(body), &passenger); err != nil {
-			Error("getPassengerDTO", cdn, err)
-			continue
-		} else {
-			Info(cdn, "获取成功！")
-			break
-		}
-	}
-	Debug(passenger)
-
-}
-
-func dyLoginJs(cdn string) error {
-	body, err := DoForWardRequest(cdn, "GET", URLLoginJs, nil)
+func loginInit(cdn string) error {
+	body, err := DoForWardRequest(cdn, "GET", URLLoginInit, nil)
 	if err != nil {
-		Error("dyLoginJs DoForWardRequest error:", err)
+		Error("loginInit DoForWardRequest error:", err)
 		return err
 	}
-	Debug("dyLoginJs body:", body)
-	return nil
-}
-func LoginInit(cdn string) error {
-	h := map[string]string{"Referer": "https://kyfw.12306.cn/otn/"}
-	body, err := DoForWardRequestHeader(cdn, "GET", URLLoginInit, nil, h)
-	if err != nil {
-		Error("LoginInit DoForWardRequest error:", err)
-		return err
-	}
-	Debug("LoginInit body:", body)
+	Debug("loginInit body:", body)
 	return nil
 }
 
-func dyQueryJs(cdn string) error {
+func dynamicJsLoginJs(cdn string) error {
+	h := map[string]string{"Referer": "https://kyfw.12306.cn/otn/login/init"}
+	body, err := DoForWardRequestHeader(cdn, "GET", URLLoginJs, nil, h)
+	if err != nil {
+		Error("dynamicJsLoginJs DoForWardRequest error:", err)
+		return err
+	}
+	Debug("dynamicJsLoginJs body:", body)
+	return nil
+}
+
+func dynamicJsQueryJs(cdn string) error {
 	h := map[string]string{"Referer": "https://kyfw.12306.cn/otn/leftTicket/init"}
 	body, err := DoForWardRequestHeader(cdn, "GET", URLQueryJs, nil, h)
 	if err != nil {
-		Error("dyQueryJs DoForWardRequest error:", err)
+		Error("dynamicJsQueryJs DoForWardRequest error:", err)
 		return err
 	}
-	Debug("dyQueryJs body:", body)
+	Debug("dynamicJsQueryJs body:", body)
 	return nil
 
 }
 
-func GetPassCodes(cdn string) error {
+func getPassCodeNewInQueryPage(cdn string) error {
 	h := map[string]string{
 		"Referer": "https://kyfw.12306.cn/otn/leftTicket/init",
 		"Accept":  "image/png, image/svg+xml, image/*;q=0.8, */*;q=0.5",
 	}
 	body, err := DoForWardRequestHeader(cdn, "GET", URLLoginPassCode, nil, h)
 	if err != nil {
-		Error("GetPassCodes DoForWardRequest error:", err)
+		Error("getPassCodeNewInQueryPage DoForWardRequestHeader error:", err)
 		return err
 	}
-	Debug("GetPassCodes body:", body)
+	Debug("getPassCodeNewInQueryPage body:", body)
 	return nil
 
-}
-
-func initQueryUserInfo(cdn string) error {
-	body, err := DoForWardRequest(cdn, "GET", URLInitQueryUserInfo, nil)
-	if err != nil {
-		Error("initQueryUserInfo DoForWardRequest error:", err)
-		return err
-	}
-	Debug("initQueryUserInfo body:", body)
-	return nil
-}
-
-func checkUser(cdn string) error {
-	h := map[string]string{
-		"x-requested-with": "XMLHttpRequest",
-		"Referer": "https://kyfw.12306.cn/otn/leftTicket/init",
-	}
-	body, err := DoForWardRequestHeader(cdn, "POST", URLCheckUser, nil, h)
-	if err != nil {
-		Error("checkUser DoForWardRequest error:", err)
-		return err
-	}
-	Info("checkUser body:", body)
-	return nil
-}
-
-func leftTicketInit(cdn string) error {
-	body, err := DoForWardRequest(cdn, "GET", URLInit, nil)
-	if err != nil {
-		Error("leftTicketInit DoForWardRequest error:", err)
-		return err
-	}
-	Debug("leftTicketInit body:", body)
-	return nil
-}
-
-//获取新的验证码图片
-func GetLoginImage(cdn string) image.Image {
-	req, err := http.NewRequest("GET", URLLoginPassCode, nil)
-	if err != nil {
-		Error("GetImage http.NewRequest error:", err)
-		return nil
-	}
-	AddReqestHeader(req, "GET", map[string]string{"Accept": "image/webp,*/*;q=0.8"})
-	req.Header.Del("X-Requested-With")
-	con, err := NewForwardClientConn(cdn, req.URL.Scheme)
-	if err != nil {
-		Error("GetImage newForwardClientConn error:", err)
-		return nil
-	}
-	defer con.Close()
-	resp, err := con.Do(req)
-	if err != nil {
-		Error("GetImage con.Do error:", err)
-		return nil
-	}
-	defer resp.Body.Close()
-
-	img, s, err := image.Decode(resp.Body)
-	Debug("image type:", s)
-	if err != nil {
-		Error("GetImage image.Decode:", err)
-		return nil
-	}
-	return img
 }
 
 //从响应消息头里面获取cookie
@@ -193,6 +95,14 @@ func DoForWardRequestHeader(cdn, method, requestUrl string, body io.Reader, cust
 	}
 	AddReqestHeader(req, method, customHeader)
 
+	// con, err := NewForwardClientConn(cdn, req.URL.Scheme)
+	// if err != nil {
+	// 	Error("DoForWardRequestHeader NewForwardClientConn error:", err)
+	// 	return "", err
+	// }
+	// defer con.Close()
+	// resp, err := con.Do(req)
+
 	resp, err := client.Do(req)
 	if err != nil {
 		Error("DoForWardRequest con.Do error:", err)
@@ -214,7 +124,6 @@ func DoForWardRequestHeader(cdn, method, requestUrl string, body io.Reader, cust
 
 //添加头
 func AddReqestHeader(request *http.Request, method string, customHeader map[string]string) {
-	// request.Header.Set("Connection", "Keep-Alive")
 	request.Header.Set("Accept-Language", "zh-CN")
 	request.Header.Set("Accept", "*/*")
 	request.Header.Set("User-Agent", UserAgent)
@@ -230,7 +139,7 @@ func AddReqestHeader(request *http.Request, method string, customHeader map[stri
 	for k, v := range customHeader {
 		request.Header.Set(k, v)
 	}
-	Info(request.Header)
+	Debug(request.Header)
 }
 
 //读取响应

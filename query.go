@@ -21,8 +21,8 @@ type Query struct {
 }
 
 //查询
-func (q *Query) Order() (order *Order) {
-	order = nil
+func (q *Query) Order() (or *Order) {
+	or = nil
 	if err, ticketInfo := q.queryLeftTicket(); err == nil { //获取车次
 		for _, trainCode := range q.TrianCodes { //要预订的车次
 			trainCode = strings.ToUpper(trainCode)
@@ -33,7 +33,7 @@ func (q *Query) Order() (order *Order) {
 					ticketNum := GetTicketNum(tkt.YpInfo, tkt.YpEx)
 					if validateNum(ticketNum, q.NumOfSeatType) { //想要预订席别的余票大于等于订票人的人数
 						Info(q.CDN, "开始订票", q.TrainDate, "车次", tkt.StationTrainCode, "余票", fmt.Sprintf("%v", ticketNum))
-						order = &Order{
+						or = &Order{
 							CDN:                q.CDN,
 							PassengerTicketStr: q.PassengerTicketStr,
 							OldPassengerStr:    q.OldPassengerStr,
@@ -101,6 +101,20 @@ func (q *Query) queryLeftTicket() (error, *QueryLeftNewDTO) {
 	return nil, leftTicket
 }
 
+func (q *Query) checkUser() (bool, error) {
+	h := map[string]string{
+		"X-Requested-With": "XMLHttpRequest",
+		"Referer":          "https://kyfw.12306.cn/otn/leftTicket/init",
+	}
+	body, err := DoForWardRequestHeader(q.CDN, "POST", URLCheckUser, strings.NewReader("_json_att="), h)
+	if err != nil {
+		Error("checkUser DoForWardRequest error:", err)
+		return false, err
+	}
+	Debug("checkUser body:", body)
+	return strings.Contains(body, `"data":{"flag":true}`), nil
+}
+
 // 获取 类似:[硬卧:1,二等座:2]==>二等座
 func getSeatType(seatTypeNum map[string]int) (t string) {
 	t = "3"
@@ -124,52 +138,4 @@ func validateNum(ticketNum, seatTypeNum map[string]int) (b bool) {
 		}
 	}
 	return
-}
-
-func (t *TicketQuery) parseTicket(q *Query) {
-	q.FromStations = parseStrings(t.Start)
-	q.ToStations = parseStrings(t.End)
-	q.Trians = parseStrings(t.Train)
-	q.TrainDate = t.TrainDate
-}
-
-func parseStrings(str string) (s []string) {
-	str = strings.Replace(str, "，", ",", -1)
-	str = strings.Replace(str, "；", ",", -1)
-	str = strings.Replace(str, ";", ",", -1)
-	if !strings.Contains(str, ",") {
-		s = append(s, str)
-	} else {
-		for _, v := range strings.Split(str, ",") {
-			if ts := strings.TrimSpace(v); ts != "" {
-				s = append(s, ts)
-			}
-		}
-	}
-	return
-}
-
-func (t *TicketQuery) parseStranger(q *Query) {
-	oStr, nStr := "", ""
-	m := make(map[string]int)
-	oStr, nStr, m = plusNum(oStr, nStr, t.P1.SeatType1, t.P1.TicketType1, t.P1.PassengerName1, t.P1.IDType1, t.P1.IDNumber1, m)
-	oStr, nStr, m = plusNum(oStr, nStr, t.P2.SeatType2, t.P2.TicketType2, t.P2.PassengerName2, t.P2.IDType2, t.P2.IDNumber2, m)
-	oStr, nStr, m = plusNum(oStr, nStr, t.P3.SeatType3, t.P3.TicketType3, t.P3.PassengerName3, t.P3.IDType3, t.P3.IDNumber3, m)
-	oStr, nStr, m = plusNum(oStr, nStr, t.P4.SeatType4, t.P4.TicketType4, t.P4.PassengerName4, t.P4.IDType4, t.P4.IDNumber4, m)
-	oStr, nStr, m = plusNum(oStr, nStr, t.P5.SeatType5, t.P5.TicketType5, t.P5.PassengerName5, t.P5.IDType5, t.P5.IDNumber5, m)
-
-	q.NumOfSeatType = m
-	q.OldPassengerStr = oStr
-	q.PassengerTicketStr = nStr[:len(nStr)-1]
-}
-
-func plusNum(oStr, nStr, SeatType, TicketType, Name, PassengerIdTypeCode, PassengerIdNo string, m map[string]int) (string, string, map[string]int) {
-	if strings.TrimSpace(Name) != "" {
-		name := SeatTypeValueToN[SeatType]
-		m[name] = m[name] + 1
-		nStr += SeatType + ",0," + TicketType + "," + Name + "," + PassengerIdTypeCode + "," + PassengerIdNo + ",,N_"
-		oStr += Name + "," + PassengerIdTypeCode + "," + PassengerIdNo + "," + TicketType + "_"
-		return oStr, nStr, m
-	}
-	return oStr, nStr, m
 }

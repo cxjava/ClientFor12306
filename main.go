@@ -19,20 +19,8 @@ import (
 )
 
 var (
-	SubmitCaptchaStr = make(chan string)
-	login            = &Login{}
-	ticket           = &TicketQueryInfo{
-		SubmitCaptchaStr: make(chan string),
-		P1:               &PassengerOrder{},
-		P2:               &PassengerOrder{},
-		P3:               &PassengerOrder{},
-		P4:               &PassengerOrder{},
-		P5:               &PassengerOrder{},
-	}
-
-	mapPassengers = make(map[string]Passenger)
-)
-var (
+	login  = &Login{}
+	order  = &Order{}
 	client = &http.Client{}
 	ws     *websocket.Conn
 )
@@ -65,60 +53,6 @@ func init() {
 
 }
 
-type UserLoginForm struct {
-	Username string `form:"username" binding:"required"`
-	Password string `form:"password" binding:"required"`
-	Code     string `form:"code" binding:"required"`
-}
-type TicketQuery struct {
-	CDN                string
-	FromStations       []string
-	ToStations         []string
-	Trians             []string
-	PassengerTicketStr string
-	OldPassengerStr    string
-	NumOfSeatType      map[string]int
-	Start              string `form:"start" binding:"required"`
-	End                string `form:"end" binding:"required"`
-	Train              string `form:"train" binding:"required"`
-	TrainDate          string `form:"date" binding:"required"`
-	P1                 struct {
-		PassengerName1 string `form:"passengerName1" binding:"required"`
-		TicketType1    string `form:"ticketType1" binding:"required"`
-		SeatType1      string `form:"seatType1" binding:"required"`
-		IDType1        string `form:"IDType1" binding:"required"`
-		IDNumber1      string `form:"IDNumber1" binding:"required"`
-	}
-	P2 struct {
-		PassengerName2 string `form:"passengerName2" `
-		TicketType2    string `form:"ticketType2" `
-		SeatType2      string `form:"seatType2" `
-		IDType2        string `form:"IDType2" `
-		IDNumber2      string `form:"IDNumber2" `
-	}
-	P3 struct {
-		PassengerName3 string `form:"passengerName3" `
-		TicketType3    string `form:"ticketType3" `
-		SeatType3      string `form:"seatType3" `
-		IDType3        string `form:"IDType3" `
-		IDNumber3      string `form:"IDNumber3" `
-	}
-	P4 struct {
-		PassengerName4 string `form:"passengerName4" `
-		TicketType4    string `form:"ticketType4" `
-		SeatType4      string `form:"seatType4" `
-		IDType4        string `form:"IDType4" `
-		IDNumber4      string `form:"IDNumber4" `
-	}
-	P5 struct {
-		PassengerName5 string `form:"passengerName5"`
-		TicketType5    string `form:"ticketType5"`
-		SeatType5      string `form:"seatType5"`
-		IDType5        string `form:"IDType5"`
-		IDNumber5      string `form:"IDNumber5"`
-	}
-}
-
 func main() {
 	m := martini.Classic()
 	// render html templates from templates directory
@@ -134,7 +68,7 @@ func main() {
 	}))
 
 	m.Get("/", func(r render.Render) {
-		go LoginInit("")
+		go dynamicJsLoginJs("")
 		r.HTML(200, "login", nil)
 	})
 
@@ -252,17 +186,17 @@ func loginPassCodeNewFunc(res http.ResponseWriter, req *http.Request, params mar
 }
 func QueryForm(res http.ResponseWriter, req *http.Request, params martini.Params, r render.Render, tq TicketQuery) {
 	Info(tq)
-	tq.parseTicket()
-	tq.parseStranger()
+	query := &Query{}
+	tq.parseTicket(query)
+	tq.parseStranger(query)
 	Info(tq)
 	go func() {
 		// LeftTicketInit()
 		// DYQueryJs()
 
-		order = tq.Order()
+		order = query.Order()
 		Info(order)
 		// q.leftTicketInit()
-		checkUser("")
 		order.submitOrderRequest()
 		// q.DYQueryJs()
 		order.initDc()
@@ -313,8 +247,8 @@ func loadUser(res http.ResponseWriter, req *http.Request, params martini.Params,
 		return
 	}
 	login.leftTicketInit()
-	dyQueryJs("")
-	GetPassCodes("")
+	dynamicJsQueryJs("")
+	getPassCodeNewInQueryPage("")
 	// login.userLogin()
 	passenger := login.getPassengerDTO()
 
