@@ -13,7 +13,6 @@ import (
 
 	"github.com/go-martini/martini"
 	"github.com/gorilla/websocket"
-	"github.com/lonnc/golang-nw"
 	"github.com/martini-contrib/binding"
 	"github.com/martini-contrib/render"
 )
@@ -68,7 +67,10 @@ func main() {
 	}))
 
 	m.Get("/", func(r render.Render) {
-		go dynamicJsLoginJs("")
+		go func() {
+			loginInit(Conf.CDN[0])
+			dynamicJsLoginJs(Conf.CDN[0])
+		}()
 		r.HTML(200, "login", nil)
 	})
 
@@ -78,21 +80,22 @@ func main() {
 	m.Post("/query", binding.Form(TicketQuery{}), QueryForm)
 	m.Post("/loadUser", loadUser)
 	m.Get("/sock", Sock)
-	nodeWebkit, err := nw.New()
-	if err != nil {
-		panic(err)
-	}
-	Info("a")
+	// nodeWebkit, err := nw.New()
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// Info("a")
 	// Pick a random localhost port, start listening for http requests using default handler
 	// and send a message back to node-webkit to redirect
-	if err := nodeWebkit.ListenAndServe(m); err != nil {
-		panic(err)
-	}
+	// if err := nodeWebkit.ListenAndServe(m); err != nil {
+	// 	panic(err)
+	// }
 	Info("b")
-	// m.Run()
+	m.Run()
 	Info("c")
-	// log.Fatal(http.ListenAndServe(":8080", m))
 }
+
+// sock 接口
 func Sock(w http.ResponseWriter, r *http.Request) {
 	var err error
 	ws, err = websocket.Upgrade(w, r, nil, 1024, 1024)
@@ -111,7 +114,7 @@ func Sock(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		msg := string(p)
-		Info(msg)
+		Info("websocket:", msg, messageType)
 		if strings.Contains(msg, "code#") {
 			code := msg[5:]
 			Info("code:", code)
@@ -124,14 +127,23 @@ func Sock(w http.ResponseWriter, r *http.Request) {
 
 			go func() {
 				order.checkOrderInfo()
+				order.getQueueCount()
+				order.confirmSingleForQueue()
 			}()
 
 			order.SubmitCaptchaStr <- code
 		}
-		Info(messageType)
 	}
 }
+
+//提交订单验证码
 func submitPassCodeNewFunc(res http.ResponseWriter, req *http.Request, params martini.Params) {
+
+	bodyByte := make([]byte, 30)
+	defer func() {
+		res.Header().Set("Content-Type", "image/jpeg")
+		res.Write(bodyByte)
+	}()
 
 	req, err := http.NewRequest("GET", URLPassCodeNewPassenger+"&"+params["_1"], nil)
 	if err != nil {
@@ -142,74 +154,98 @@ func submitPassCodeNewFunc(res http.ResponseWriter, req *http.Request, params ma
 	h := map[string]string{"Referer": "https://kyfw.12306.cn/otn/confirmPassenger/initDc"}
 	AddReqestHeader(req, "GET", h)
 
-	resp, err := client.Do(req)
+	con, err := NewForwardClientConn(order.CDN, req.URL.Scheme)
+	if err != nil {
+		Error("DoForWardRequestHeader NewForwardClientConn error:", err)
+		return
+	}
+	defer con.Close()
+	resp, err := con.Do(req)
+
 	if err != nil {
 		Error("submitPassCodeNewFunc client.Do error:", err)
 		return
 	}
 	defer resp.Body.Close()
 
-	bodyByte, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		Error("ioutil.ReadAll:", err)
+	var err1 error
+	bodyByte, err1 = ioutil.ReadAll(resp.Body)
+	if err1 != nil {
+		Error("ioutil.ReadAll:", err1)
 		return
 	}
-	res.Header().Set("Content-Type", "image/jpeg")
-	res.Write(bodyByte)
 }
+
+//登陆验证码
 func loginPassCodeNewFunc(res http.ResponseWriter, req *http.Request, params martini.Params) {
 	login.setNewCookie()
 
+	bodyByte := make([]byte, 30)
+	defer func() {
+		res.Header().Set("Content-Type", "image/jpeg")
+		res.Write(bodyByte)
+	}()
+
 	req, err := http.NewRequest("GET", URLLoginPassCode+"&"+params["_1"], nil)
 	if err != nil {
-		Error("setNewCookie http.NewRequest error:", err)
+		Error("loginPassCodeNewFunc http.NewRequest error:", err)
 		return
 	}
 
 	h := map[string]string{"Referer": "https://kyfw.12306.cn/otn/leftTicket/init"}
 	AddReqestHeader(req, "GET", h)
 
-	resp, err := client.Do(req)
+	con, err := NewForwardClientConn(Conf.CDN[0], req.URL.Scheme)
 	if err != nil {
-		Error("setNewCookie client.Do error:", err)
+		Error("loginPassCodeNewFunc NewForwardClientConn error:", err)
+		return
+	}
+	defer con.Close()
+	resp, err := con.Do(req)
+
+	// resp, err := client.Do(req)
+	if err != nil {
+		Error("loginPassCodeNewFunc error:", err)
 		return
 	}
 	defer resp.Body.Close()
 
-	bodyByte, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		Error("ioutil.ReadAll:", err)
+	var err1 error
+	bodyByte, err1 = ioutil.ReadAll(resp.Body)
+	if err1 != nil {
+		Error("ioutil.ReadAll:", err1)
 		return
 	}
-	res.Header().Set("Content-Type", "image/jpeg")
-	res.Write(bodyByte)
 }
+
+//查询按钮
 func QueryForm(res http.ResponseWriter, req *http.Request, params martini.Params, r render.Render, tq TicketQuery) {
 	Info(tq)
 	query := &Query{}
 	tq.parseTicket(query)
 	tq.parseStranger(query)
-	Info(tq)
+	Info(query)
 	go func() {
-		// LeftTicketInit()
-		// DYQueryJs()
-
+		query.CDN = Conf.CDN[0]
 		order = query.Order()
-		Info(order)
-		// q.leftTicketInit()
-		order.submitOrderRequest()
-		// q.DYQueryJs()
-		order.initDc()
-		order.GetPassengerDTO()
-		Info("order:", order)
-		// go func() {
-		// 	order.checkOrderInfo()
-		// }()
-		ws.WriteMessage(1, []byte("update"))
+		if order != nil {
+			if re, err := order.checkUser(); re {
+				order.submitOrderRequest()
+				order.initDc()
+				go order.GetPassengerDTO()
+				ws.WriteMessage(1, []byte("update"))
+			} else {
+				Error("checkUser 失败!", err)
+			}
+		} else {
+			Error("order is nil")
+		}
 	}()
 
-	r.JSON(200, map[string]interface{}{"r": true, "o": tq})
+	r.JSON(200, map[string]interface{}{"r": true, "o": query})
 }
+
+//登陆
 func LoginForm(res http.ResponseWriter, req *http.Request, params martini.Params, r render.Render, l UserLoginForm) {
 	fmt.Println(l.Username)
 	fmt.Println(l.Password)
@@ -217,6 +253,7 @@ func LoginForm(res http.ResponseWriter, req *http.Request, params martini.Params
 	login.Username = l.Username
 	login.Password = l.Password
 	login.Captcha = l.Code
+	login.CDN = Conf.CDN[0]
 	if b, err := login.checkUser(); err != nil {
 		Error(err)
 		return
@@ -234,22 +271,22 @@ func LoginForm(res http.ResponseWriter, req *http.Request, params martini.Params
 		r.HTML(200, "login", map[string]interface{}{"r": !result, "msg": msg, "username": l.Username, "password": l.Password})
 		return
 	}
-
-	login.checkUser()
-	login.userLogin()
-	go login.initQueryUserInfo()
-	login.leftTicketInit()
+	go func() {
+		login.userLogin()
+		login.initQueryUserInfo()
+		login.leftTicketInit()
+		dynamicJsQueryJs(login.CDN)
+		getPassCodeNewInQueryPage(login.CDN)
+	}()
 	r.HTML(200, "main", nil)
 }
+
+//获取用户
 func loadUser(res http.ResponseWriter, req *http.Request, params martini.Params, r render.Render) {
 	if b, err := login.checkUser(); !b {
 		r.JSON(200, map[string]interface{}{"r": b, "o": err})
 		return
 	}
-	login.leftTicketInit()
-	dynamicJsQueryJs("")
-	getPassCodeNewInQueryPage("")
-	// login.userLogin()
 	passenger := login.getPassengerDTO()
 
 	r.JSON(200, map[string]interface{}{"r": true, "o": passenger.Data.NormalPassengers})

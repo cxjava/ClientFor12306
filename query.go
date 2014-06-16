@@ -45,7 +45,8 @@ func (q *Query) Order() (or *Order) {
 						}
 						break
 					} else {
-						Info("车次", tkt.StationTrainCode, "余票不足！！！剩余票：", fmt.Sprintf("%v", ticketNum), "订购的票:", fmt.Sprintf("%v", q.NumOfSeatType))
+						Info("车次", tkt.StationTrainCode, "余票不足！！！剩余票：", fmt.Sprintf("%v", ticketNum))
+						Info("订购的票:", fmt.Sprintf("%v", q.NumOfSeatType))
 						break
 					}
 				}
@@ -67,7 +68,7 @@ func (q *Query) queryLeftTicket() (error, *QueryLeftNewDTO) {
 	leftTicketUrl += "leftTicketDTO.to_station=" + StationMap[q.ToStations[rand.Intn(len(q.ToStations))]] + "&"
 	leftTicketUrl += "purpose_codes=" + Purpose_codes
 
-	Info("queryLeftTicket url:", leftTicketUrl)
+	Info("queryLeftTicket url:", URLQueryLog+leftTicketUrl)
 
 	h := map[string]string{
 		"Cache-Control":     "no-cache",
@@ -99,20 +100,6 @@ func (q *Query) queryLeftTicket() (error, *QueryLeftNewDTO) {
 		Info(q.CDN, "获取余票成功！")
 	}
 	return nil, leftTicket
-}
-
-func (q *Query) checkUser() (bool, error) {
-	h := map[string]string{
-		"X-Requested-With": "XMLHttpRequest",
-		"Referer":          "https://kyfw.12306.cn/otn/leftTicket/init",
-	}
-	body, err := DoForWardRequestHeader(q.CDN, "POST", URLCheckUser, strings.NewReader("_json_att="), h)
-	if err != nil {
-		Error("checkUser DoForWardRequest error:", err)
-		return false, err
-	}
-	Debug("checkUser body:", body)
-	return strings.Contains(body, `"data":{"flag":true}`), nil
 }
 
 // 获取 类似:[硬卧:1,二等座:2]==>二等座

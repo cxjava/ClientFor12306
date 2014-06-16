@@ -56,7 +56,7 @@ func (order *Order) confirmSingleForQueue() error {
 	if strings.Contains(body, `"submitStatus":true`) {
 		Info("提交订单成功 body:", body)
 		fmt.Println("提交订单成功 body:", body)
-	} else if strings.Contains(body, `订单未支付`) {
+	} else if strings.Contains(body, `包含未付款订单`) {
 		Warn("订票成功！！")
 		fmt.Println("订票成功！！")
 	} else if strings.Contains(body, `用户未登录`) {
@@ -200,7 +200,7 @@ func (order *Order) initDc() error {
 		Error("initDc DoForWardRequest error:", err)
 		return err
 	}
-	fmt.Println("initDc body:", body)
+	Debug("initDc body:", body)
 
 	if !strings.Contains(body, `'key_check_isChange':'`) {
 		return fmt.Errorf("获取网页出错！body:%v", body)
@@ -262,4 +262,18 @@ func (order *Order) submitOrderRequest() error {
 		return nil
 	}
 	return fmt.Errorf("提交订票请求出错！返回信息:%v", body)
+}
+
+func (order *Order) checkUser() (bool, error) {
+	h := map[string]string{
+		"X-Requested-With": "XMLHttpRequest",
+		"Referer":          "https://kyfw.12306.cn/otn/leftTicket/init",
+	}
+	body, err := DoForWardRequestHeader(order.CDN, "POST", URLCheckUser, strings.NewReader("_json_att="), h)
+	if err != nil {
+		Error("checkUser DoForWardRequest error:", err)
+		return false, err
+	}
+	Debug("checkUser body:", body)
+	return strings.Contains(body, `"data":{"flag":true}`), nil
 }

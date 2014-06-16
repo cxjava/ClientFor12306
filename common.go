@@ -90,35 +90,35 @@ func DoForWardRequest(cdn, method, requestUrl string, body io.Reader) (string, e
 func DoForWardRequestHeader(cdn, method, requestUrl string, body io.Reader, customHeader map[string]string) (string, error) {
 	req, err := http.NewRequest(method, requestUrl, body)
 	if err != nil {
-		Error("DoForWardRequest http.NewRequest error:", err)
+		Error(cdn, "DoForWardRequest http.NewRequest error:", err)
 		return "", err
 	}
 	AddReqestHeader(req, method, customHeader)
 
-	// con, err := NewForwardClientConn(cdn, req.URL.Scheme)
-	// if err != nil {
-	// 	Error("DoForWardRequestHeader NewForwardClientConn error:", err)
-	// 	return "", err
-	// }
-	// defer con.Close()
-	// resp, err := con.Do(req)
-
-	resp, err := client.Do(req)
+	con, err := NewForwardClientConn(cdn, req.URL.Scheme)
 	if err != nil {
-		Error("DoForWardRequest con.Do error:", err)
+		Error(cdn, "DoForWardRequestHeader NewForwardClientConn error:", err)
+		return "", err
+	}
+	defer con.Close()
+	resp, err := con.Do(req)
+
+	// resp, err := client.Do(req)
+	if err != nil {
+		Error(cdn, "DoForWardRequest con.Do error:", err)
 		return "", err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		Error("DoForWardRequest StatusCode:", resp.StatusCode)
+		Error(cdn, "DoForWardRequest StatusCode:", resp.StatusCode)
 		for k, v := range resp.Header {
 			Error("k=", k, "v=", v)
 		}
 		return "", err
 	}
 	content := ParseResponseBody(resp)
-	Debug("DoForWardRequest content:", content)
+	Debug(cdn, "DoForWardRequest content:", content)
 	return content, nil
 }
 
@@ -176,7 +176,7 @@ func NewForwardClientConn(forwardAddress, scheme string) (*httputil.ClientConn, 
 	if "http" == scheme {
 		conn, err := net.Dial("tcp", forwardAddress+":80")
 		if err != nil {
-			Error("newForwardClientConn net.Dial error:", err)
+			Error(forwardAddress, "newForwardClientConn net.Dial error:", err)
 			return nil, err
 		}
 		return httputil.NewProxyClientConn(conn, nil), nil
@@ -185,7 +185,7 @@ func NewForwardClientConn(forwardAddress, scheme string) (*httputil.ClientConn, 
 		InsecureSkipVerify: true,
 	})
 	if err != nil {
-		Error("newForwardClientConn tls.Dial error:", err)
+		Error(forwardAddress, "newForwardClientConn tls.Dial error:", err)
 		return nil, err
 	}
 	return httputil.NewProxyClientConn(conn, nil), nil

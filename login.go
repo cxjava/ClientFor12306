@@ -37,15 +37,15 @@ func (l *Login) setNewCookie() error {
 	h := map[string]string{"Referer": "https://kyfw.12306.cn/otn/login/init"}
 	AddReqestHeader(req, "GET", h)
 
-	// con, err := NewForwardClientConn(l.CDN, req.URL.Scheme)
-	// if err != nil {
-	// 	Error("DoForWardRequestHeader NewForwardClientConn error:", err)
-	// 	return "", err
-	// }
-	// defer con.Close()
-	// resp, err := con.Do(req)
-	//
-	resp, err := client.Do(req)
+	con, err := NewForwardClientConn(Conf.CDN[0], req.URL.Scheme)
+	if err != nil {
+		Error("DoForWardRequestHeader NewForwardClientConn error:", err)
+		return err
+	}
+	defer con.Close()
+	resp, err := con.Do(req)
+
+	// resp, err := client.Do(req)
 	if err != nil {
 		Error("setNewCookie error:", err)
 		return err
@@ -69,7 +69,7 @@ func (l *Login) CheckRandCodeAnsyn() (r bool, msg []string) {
 	b.Add("rand", Rand)
 	Info("CheckRandCodeAnsyn params:", b.Encode())
 	h := map[string]string{"Referer": "https://kyfw.12306.cn/otn/login/init"}
-	content, err := DoForWardRequestHeader(login.CDN, "POST", URLCheckRandCodeAnsyn, strings.NewReader(b.Encode()), h)
+	content, err := DoForWardRequestHeader(l.CDN, "POST", URLCheckRandCodeAnsyn, strings.NewReader(b.Encode()), h)
 	if err != nil {
 		Error("CheckRandCodeAnsyn DoForWardRequestHeader error:", err)
 		return false, []string{err.Error()}
