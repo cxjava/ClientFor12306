@@ -25,6 +25,9 @@ var (
 	login        = &Login{}
 	order        = &Order{}
 	client       = &http.Client{}
+	quit         = make(chan bool)
+	first        = true
+	numbers      = 1
 	ws           *websocket.Conn
 )
 
@@ -83,6 +86,7 @@ func main() {
 	m.Post("/login", binding.Form(UserLoginForm{}), LoginForm)
 	m.Post("/query", binding.Form(TicketQuery{}), QueryForm)
 	m.Post("/loadUser", loadUser)
+	m.Post("/stop", stopQuery)
 	m.Get("/sock", Sock)
 	// nodeWebkit, err := nw.New()
 	// if err != nil {
@@ -229,47 +233,57 @@ func QueryForm(res http.ResponseWriter, req *http.Request, params martini.Params
 	tq.parseTicket(query)
 	tq.parseStranger(query)
 	Info(query)
-	go func() {
-		close(cdnChannel)
-		cdnChannel = make(chan string, 1)
-		for {
-			for _, cdn := range Conf.CDN {
-				cdnChannel <- cdn
-			}
-		}
-	}()
-	go func() {
+	Info(numbers)
 
-		for {
-			if cdn, ok := <-cdnChannel; ok {
-				querywg.Add(1)
-				queryChannel <- 1
-				go func() {
-					defer func() {
-						<-queryChannel
-						querywg.Done()
-					}()
-					query.CDN = cdn
-					order = query.Order()
-					if order != nil {
-						if re, err := order.checkUser(); re {
-							order.submitOrderRequest()
-							order.initDc()
-							go order.GetPassengerDTO()
-							ws.WriteMessage(1, []byte("update"))
-						} else {
-							Error("checkUser 失败!", err)
-						}
-					}
-				}()
+	// if first {
+	// 	fmt.Println("OK")
+	// 	Info("OK")
+	// 	first = false
+	// } else {
+	// 	close(quit)
+	// 	fmt.Println("Make")
+	// 	Info("Make")
+	// }
 
-			} else {
+	go func() {
+		temp := numbers
+		for {
+			select {
+			case <-quit: // closed channel 不会阻塞，因此可用作退出通知。
+				//退出上次执行的routine
+				fmt.Println("quit1", temp)
+				quit = make(chan bool)
+				fmt.Println("quit2", temp)
 				break
+			default: // 执行正常任务。
+				for _, cdn := range Conf.CDN {
+					querywg.Add(1)
+					queryChannel <- 1
+					time.Sleep(time.Second * 3)
+					go func() {
+						defer func() {
+							<-queryChannel
+							querywg.Done()
+						}()
+						query.CDN = cdn
+						order = query.Order()
+						if order != nil {
+							if re, err := order.checkUser(); re {
+								order.submitOrderRequest()
+								order.initDc()
+								go order.GetPassengerDTO()
+								ws.WriteMessage(1, []byte("update"))
+							} else {
+								Error("checkUser 失败!", err)
+							}
+						}
+					}()
+				}
+				querywg.Wait()
 			}
 		}
-		querywg.Wait()
 	}()
-
+	numbers = numbers + 1
 	r.JSON(200, map[string]interface{}{"r": true, "o": query})
 }
 
@@ -318,4 +332,14 @@ func loadUser(res http.ResponseWriter, req *http.Request, params martini.Params,
 	passenger := login.getPassengerDTO()
 
 	r.JSON(200, map[string]interface{}{"r": true, "o": passenger.Data.NormalPassengers})
+}
+
+//停止查询
+func stopQuery(res http.ResponseWriter, req *http.Request, params martini.Params, r render.Render) {
+
+	// close(quit)
+	fmt.Println("Make")
+	Info("Make")
+
+	r.JSON(200, map[string]interface{}{"r": true, "o": "OK"})
 }

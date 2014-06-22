@@ -87,10 +87,18 @@ $(document).ready(function() {
 	}
 
 	$("#submit").click(function() {
-
+		// if ($("#submit").html() == "查询") {
+		// 	$("#submit").html("停止")
 		$.post('/query', $("form").serialize(), function(data, textStatus, xhr) {
 			console.log(data);
 		});
+		// } else {
+		// 	$("#submit").html("查询")
+		// 	$.post('/stop', function(data, textStatus, xhr) {
+		// 		console.log(data);
+		// 	});
+		// }
+
 		return false;
 	});
 
