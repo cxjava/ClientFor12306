@@ -14,6 +14,8 @@ import (
 	_ "image/png"
 )
 
+var SubmitCaptchaStr = make(chan string, 1)
+
 type Order struct {
 	CDN                string
 	SeatType           string
@@ -106,7 +108,7 @@ func (order *Order) getQueueCount() error {
 
 func (order *Order) checkOrderInfo() error {
 	//等待输入验证码
-	submitCode := <-order.SubmitCaptchaStr
+	submitCode := <-SubmitCaptchaStr
 	order.RandCode = submitCode
 	Info("验证码:", order.RandCode)
 
@@ -274,6 +276,6 @@ func (order *Order) checkUser() (bool, error) {
 		Error("checkUser DoForWardRequest error:", err)
 		return false, err
 	}
-	Debug("checkUser body:", body)
+	Info("checkUser body:", body)
 	return strings.Contains(body, `"data":{"flag":true}`), nil
 }

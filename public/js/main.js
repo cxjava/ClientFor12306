@@ -78,26 +78,30 @@ $(document).ready(function() {
 	c.onopen = function() {
 		c.onmessage = function(response) {
 			console.log(response.data);
-			if (response.data = "update") {
+			if (response.data.indexOf("update") == 0) {
 				$("#imageDiv").html('<img src="/submitPassCodeNew/' + Math.random() + '" id="img" title="单击刷新验证码">');
 				$("#code").val("").focus();
+			} else if (response.data.indexOf("error") == 0) {
+				if ($("#submit").html() == "停止") {
+					$("#submit").html("查询")
+				}
 			}
 		};
-		c.send("test");
+		c.send("connect");
 	}
 
 	$("#submit").click(function() {
-		// if ($("#submit").html() == "查询") {
-		// 	$("#submit").html("停止")
-		$.post('/query', $("form").serialize(), function(data, textStatus, xhr) {
-			console.log(data);
-		});
-		// } else {
-		// 	$("#submit").html("查询")
-		// 	$.post('/stop', function(data, textStatus, xhr) {
-		// 		console.log(data);
-		// 	});
-		// }
+		if ($("#submit").html() == "查询") {
+			$("#submit").html("停止")
+			$.post('/query', $("form").serialize(), function(data, textStatus, xhr) {
+				console.log(data);
+			});
+		} else {
+			$("#submit").html("查询")
+			$.post('/stop', function(data, textStatus, xhr) {
+				console.log(data);
+			});
+		}
 
 		return false;
 	});

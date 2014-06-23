@@ -19,16 +19,14 @@ import (
 )
 
 var (
-	queryChannel = make(chan int, 3)    // 查询线程
-	cdnChannel   = make(chan string, 1) // CDN线程
-	querywg      = sync.WaitGroup{}     // 用于等待所有 goroutine 结束
-	login        = &Login{}
-	order        = &Order{}
-	client       = &http.Client{}
-	quit         = make(chan bool)
-	first        = true
-	numbers      = 1
-	ws           *websocket.Conn
+	queryChannel  = make(chan int, 3) // 查询线程
+	submitChannel = make(chan int, 1) // 提交线程
+	querywg       = sync.WaitGroup{}  // 用于等待所有 goroutine 结束
+	login         = &Login{}
+	client        = &http.Client{}
+	quit          = make(chan bool)
+	currentCDN    = ""
+	ws            *websocket.Conn
 )
 
 func init() {
@@ -127,19 +125,13 @@ func Sock(w http.ResponseWriter, r *http.Request) {
 			code := msg[5:]
 			Info("code:", code)
 
-			if b, msg := order.checkRandCodeAnsyn(code); !b {
+			if b, msg := checkRandCodeAnsyn(code); !b {
 				Info(msg)
 				ws.WriteMessage(1, []byte("update"))
 				return
 			}
 
-			go func() {
-				order.checkOrderInfo()
-				order.getQueueCount()
-				order.confirmSingleForQueue()
-			}()
-
-			order.SubmitCaptchaStr <- code
+			SubmitCaptchaStr <- code
 		}
 	}
 }
@@ -162,7 +154,7 @@ func submitPassCodeNewFunc(res http.ResponseWriter, req *http.Request, params ma
 	h := map[string]string{"Referer": "https://kyfw.12306.cn/otn/confirmPassenger/initDc"}
 	AddReqestHeader(req, "GET", h)
 
-	con, err := NewForwardClientConn(order.CDN, req.URL.Scheme)
+	con, err := NewForwardClientConn(currentCDN, req.URL.Scheme)
 	if err != nil {
 		Error("DoForWardRequestHeader NewForwardClientConn error:", err)
 		return
@@ -233,65 +225,93 @@ func QueryForm(res http.ResponseWriter, req *http.Request, params martini.Params
 	tq.parseTicket(query)
 	tq.parseStranger(query)
 	Info(query)
-	Info(numbers)
-
-	// if first {
-	// 	fmt.Println("OK")
-	// 	Info("OK")
-	// 	first = false
-	// } else {
-	// 	close(quit)
-	// 	fmt.Println("Make")
-	// 	Info("Make")
-	// }
-
+	queryChannel = make(chan int, 3)  // 查询线程
+	submitChannel = make(chan int, 1) // 查询线程
 	go func() {
-		temp := numbers
+	start:
 		for {
-			select {
-			case <-quit: // closed channel 不会阻塞，因此可用作退出通知。
-				//退出上次执行的routine
-				fmt.Println("quit1", temp)
-				quit = make(chan bool)
-				fmt.Println("quit2", temp)
-				break
-			default: // 执行正常任务。
-				for _, cdn := range Conf.CDN {
+			for _, cdn := range Conf.CDN { //遍历所有的CDN
+				select {
+				case <-quit: //quit 被关闭，就退出这次请求
+					quit = make(chan bool) //新建一个
+					close(queryChannel)
+					// close(submitChannel)
+					fmt.Println("close last!")
+					break start
+				default:
 					querywg.Add(1)
 					queryChannel <- 1
-					time.Sleep(time.Second * 3)
 					go func() {
 						defer func() {
+							time.Sleep(time.Second * 3)
 							<-queryChannel
 							querywg.Done()
 						}()
+
 						query.CDN = cdn
-						order = query.Order()
+						order := query.Order()
 						if order != nil {
 							if re, err := order.checkUser(); re {
-								order.submitOrderRequest()
-								order.initDc()
+								// i, ok := <-submitChannel
+								// if ok {
+								submitChannel <- 1
+								// } else {
+								// fmt.Println("closed！")
+								// return
+								// }
+								var err error
+								currentCDN = order.CDN
+								if err = order.submitOrderRequest(); err != nil {
+									ws.WriteMessage(1, []byte("error"+fmt.Sprintln(err)))
+									close(quit)
+									return
+								}
+								if err = order.initDc(); err != nil {
+									ws.WriteMessage(1, []byte("error"+fmt.Sprintln(err)))
+									close(quit)
+									return
+								}
+
 								go order.GetPassengerDTO()
+								go func() {
+									var er error
+									defer func() {
+										<-submitChannel
+									}()
+									if er = order.checkOrderInfo(); er != nil {
+										ws.WriteMessage(1, []byte("error"+fmt.Sprintln(er)))
+										close(quit)
+										return
+									}
+									if er = order.getQueueCount(); er != nil {
+										ws.WriteMessage(1, []byte("error"+fmt.Sprintln(er)))
+										close(quit)
+										return
+									}
+									if er = order.confirmSingleForQueue(); er != nil {
+										ws.WriteMessage(1, []byte("error"+fmt.Sprintln(er)))
+										close(quit)
+										return
+									}
+								}()
 								ws.WriteMessage(1, []byte("update"))
 							} else {
 								Error("checkUser 失败!", err)
+								ws.WriteMessage(1, []byte("error"+fmt.Sprintln(err)))
+								close(quit)
 							}
 						}
 					}()
 				}
-				querywg.Wait()
 			}
+			querywg.Wait()
 		}
 	}()
-	numbers = numbers + 1
 	r.JSON(200, map[string]interface{}{"r": true, "o": query})
 }
 
 //登陆
 func LoginForm(res http.ResponseWriter, req *http.Request, params martini.Params, r render.Render, l UserLoginForm) {
-	fmt.Println(l.Username)
-	fmt.Println(l.Password)
-	fmt.Println(l.Code)
 	login.Username = l.Username
 	login.Password = l.Password
 	login.Captcha = l.Code
@@ -337,7 +357,8 @@ func loadUser(res http.ResponseWriter, req *http.Request, params martini.Params,
 //停止查询
 func stopQuery(res http.ResponseWriter, req *http.Request, params martini.Params, r render.Render) {
 
-	// close(quit)
+	// end = true
+	close(quit)
 	fmt.Println("Make")
 	Info("Make")
 

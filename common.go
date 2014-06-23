@@ -3,12 +3,14 @@ package main
 import (
 	"compress/gzip"
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"net/http/httputil"
+	"net/url"
 	"strconv"
 	"strings"
 )
@@ -45,7 +47,33 @@ func dynamicJsQueryJs(cdn string) error {
 	return nil
 
 }
+func checkRandCodeAnsyn(randCode string) (r bool, msg []string) {
+	val := url.Values{}
+	// val.Add("REPEAT_SUBMIT_TOKEN", order.RepeatSubmitToken)
+	val.Add("REPEAT_SUBMIT_TOKEN", "")
+	val.Add("_json_att", Json_att)
+	val.Add("rand", Randp)
+	val.Add("randCode", randCode)
 
+	Info("checkRandCodeAnsyn params:", val.Encode())
+	h := map[string]string{
+		"X-Requested-With": "XMLHttpRequest",
+		"Referer":          "https://kyfw.12306.cn/otn/confirmPassenger/initDc",
+	}
+	body, err := DoForWardRequestHeader(currentCDN, "POST", URLCheckRandCodeAnsyn, strings.NewReader(val.Encode()), h)
+	if err != nil {
+		Error("checkRandCodeAnsyn DoForWardRequest error:", err)
+		return false, []string{err.Error()}
+	}
+	Info("checkRandCodeAnsyn body:", body)
+
+	crca := &JsonCheckRandCodeAnsyn{}
+	if err := json.Unmarshal([]byte(body), &crca); err != nil {
+		Error("checkRandCodeAnsyn json.Unmarshal:", err)
+		return false, []string{err.Error()}
+	}
+	return crca.Data == "Y", crca.Messages
+}
 func getPassCodeNewInQueryPage(cdn string) error {
 	h := map[string]string{
 		"Referer": "https://kyfw.12306.cn/otn/leftTicket/init",

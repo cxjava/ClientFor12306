@@ -17,6 +17,7 @@ var Conf Config
 
 func init() {
 	ReadConfig()
+	currentCDN = Conf.CDN[0]
 }
 
 //读取配置文件
